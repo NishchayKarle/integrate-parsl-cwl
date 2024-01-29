@@ -1,6 +1,6 @@
 import yaml
 import os
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 import pprint
 
 
@@ -105,34 +105,48 @@ class CommandLineTool:
             return self.position < other.position
 
     def __init__(self, cwl_file: str) -> None:
+        """Command Line Tool
+
+        Args:
+            cwl_file (str): CWL specs file for the Command Line Tool
+
+        Raises:
+            #TODO: change exception types
+            Exception: _description_
+            Exception: _description_
+        """
         try:
             with open(cwl_file, "r") as cwl_file:
-                self.cwl = yaml.safe_load(cwl_file)
+                cwl = yaml.safe_load(cwl_file)
 
+        #TODO: change exception types
         except Exception as exp:
             raise Exception(exp)
 
         try:
-            self.validate_cwl(self.cwl)
+            self.validate_cwl(cwl)
 
+        #TODO: change exception types
         except Exception as exp:
             raise Exception(exp, "Invalid CommandLineTool CWL file")
 
         self.__file = cwl_file
+        self.__cwl = cwl
+        self.__version = self.__cwl["cwlVersion"]
         self.__base_command = None
-        if isinstance(self.cwl["baseCommand"], list):
-            self.__base_command = " ".join(self.cwl["baseCommand"])
+        if isinstance(self.__cwl["baseCommand"], list):
+            self.__base_command = " ".join(self.__cwl["baseCommand"])
         else:
-            self.__base_command = self.cwl["baseCommand"]
+            self.__base_command = self.__cwl["baseCommand"]
 
         self.__inputs: List[self.__InputArgument__] = []
         self.__outputs = []
 
-        self.__set_inputs(self.cwl["inputs"])
-        self.__set_outputs(self.cwl["outputs"])
+        self.__set_inputs(self.__cwl["inputs"])
+        self.__set_outputs(self.__cwl["outputs"])
 
     def __str__(self) -> str:
-        return pprint.pformat(self.cwl)
+        return pprint.pformat(self.__cwl)
 
     @classmethod
     def validate_cwl(self, cwl_content: Dict[str, Any]) -> Dict[str, Any]:
@@ -152,7 +166,7 @@ class CommandLineTool:
 
         cwl_schema = Schema(
             {
-                "cwlVersion": str, # TODO: regex
+                "cwlVersion": str,  # TODO: regex
                 "baseCommand": Or([str], str, error="Invalid type for Base Command"),
                 "class": And(str, lambda cls: cls == "CommandLineTool", error="Invalid type for class"),
                 "inputs": Or(
@@ -160,11 +174,11 @@ class CommandLineTool:
                         str: Schema(
                             {
                                 "type": str,
-                                Optional("default"): Or(str, int, float, bool, list, dict, None), # TODO:? 
+                                Optional("default"): Or(str, int, float, bool, list, dict, None),  # TODO:?
                                 Optional("inputBinding"): Or(
                                     Schema(
                                         {
-                                            "position": int, #TODO: Handle case when position is not necessary
+                                            "position": int,  # TODO: Handle case when position is not necessary
                                             Optional("prefix"): str,
                                             Optional("separate"): bool,
                                             Optional("itemSeparator"): str,
@@ -180,11 +194,11 @@ class CommandLineTool:
                             {
                                 "id": str,
                                 "type": str,
-                                Optional("default"): Or(str, int, float, bool, list, dict, None), # TODO:?
+                                Optional("default"): Or(str, int, float, bool, list, dict, None),  # TODO:?
                                 Optional("inputBinding"): Or(
                                     Schema(
                                         {
-                                            "position": int, #TODO: Handle case when position is not necessary
+                                            "position": int,  # TODO: Handle case when position is not necessary
                                             Optional("prefix"): str,
                                             Optional("separate"): bool,
                                             Optional("itemSeparator"): str,
@@ -204,7 +218,12 @@ class CommandLineTool:
 
         return cwl_schema.validate(cwl_content)
 
-    def __set_inputs(self, cwl_inputs) -> None:
+    def __set_inputs(self, cwl_inputs: Union[List[Dict[str, Any]], Dict[str, any]]) -> None:
+        """Set inputs from CWL
+
+        Args:
+            cwl_inputs (Union[List[Dict[str, Any]], Dict[str, any]]): CWL inputs
+        """
         if isinstance(cwl_inputs, list):
             for inpt in cwl_inputs:
                 id = inpt["id"]
@@ -256,12 +275,10 @@ class CommandLineTool:
                     )
                 )
 
-        else:
-            print("ERROR")
-
         self.__inputs.sort()
 
     def __set_outputs(self, cwl_outputs) -> None:
+        #TODO: IMPLEMENT ME!
         self.__set_outputs = cwl_outputs
 
     @property
@@ -284,6 +301,7 @@ class CommandLineTool:
         """
         # TODO: handle case where kwargs has unnecessary args ?
         if len(kwargs) > len(self.__inputs):
+            #TODO: change exception types
             raise Exception("Too many arguments provided to the command")
 
         args = []
@@ -298,6 +316,7 @@ class CommandLineTool:
                 continue
 
             else:
+                #TODO: change exception types
                 raise Exception(f"Input parameter(s) missing: {input_arg.id}")
 
         return f"{self.__base_command} {' '.join(args)}"
