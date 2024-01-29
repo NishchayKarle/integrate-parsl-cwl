@@ -108,7 +108,7 @@ class CommandLineTool:
         with open(cwl_file, "r") as cwl_file:
             cwl = yaml.safe_load(cwl_file)
 
-        if not self.__validate_cwl(cwl):
+        if not self.validate_cwl(cwl):
             raise Exception("Invalid CommandLineTool CWL file")
 
         self.__file = cwl_file
@@ -127,7 +127,16 @@ class CommandLineTool:
     def __str__(self) -> str:
         return pprint.pformat([self.__base_command, self.__inputs, self.__outputs])
 
-    def __validate_cwl(self, cwl_content: Dict[str, Any]) -> bool:
+    @classmethod
+    def validate_cwl(self, cwl_content: Dict[str, Any]) -> bool:
+        """Check if CWL is valid.
+
+        Args:
+            cwl_content (Dict[str, Any]): CWL file for the command
+
+        Returns:
+            bool: Valid/Invalid CWL
+        """
         # TODO: IMPLEMENT ME!
         return True
 
@@ -195,10 +204,23 @@ class CommandLineTool:
 
     @property
     def command_template(self) -> str:
+        """Synopsis/Template for the command.
+
+        Returns:
+            str: template string to show example usage
+        """
         return f"COMMAND TEMPLATE:\n{self.__base_command} {' '.join([input_arg.to_string_template() for input_arg in self.__inputs])}"
 
     def get_command(self, **kwargs) -> str:
+        """Shell command to be run.
+
+        Returns:
+            str: string of the shell command that is to be run
+        """
         # TODO: handle case where kwargs has unnecessary args ?
+        if len(kwargs) > len(self.__inputs):
+            raise Exception("Too many arguments provided to the command")
+
         args = []
         for input_arg in self.__inputs:
             if input_arg.id in kwargs:
