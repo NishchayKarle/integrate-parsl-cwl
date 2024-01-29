@@ -19,7 +19,7 @@ class CommandLineTool:
         )
 
         BOOLEAN = "boolean"
-        DOOUBLE = "double"
+        DOUBLE = "double"
         DIRECTORY = "DIRECTORY"
         FILE = "File"
         FLOAT = "float"
