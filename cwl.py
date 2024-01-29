@@ -1,10 +1,7 @@
 import yaml
 import os
-import subprocess
 from typing import Dict, Any, Optional, Union, List
 import pprint
-import copy
-from collections import namedtuple
 
 
 class CommandLineTool:
@@ -41,7 +38,7 @@ class CommandLineTool:
             prefix: Optional[str],
             item_separator: Optional[str],
             separate: bool,
-        ):
+        ) -> None:
             self.id = id
             self.type = type
             self.array = array
@@ -53,10 +50,12 @@ class CommandLineTool:
             self.separate = separate
 
         def __repr__(self) -> str:
-            # TODO: delete
             return str({slot: getattr(self, slot) for slot in self.__slots__})
 
         def __str__(self) -> str:
+            return str({slot: getattr(self, slot) for slot in self.__slots__})
+
+        def to_string_template(self) -> str:
             if self.type == self.BOOLEAN:
                 return f"[{self.prefix}]"
 
@@ -77,7 +76,7 @@ class CommandLineTool:
 
             return input_arg_str
 
-        def to_string(self, input_arg: Any = None):
+        def to_string(self, input_arg: Any = None) -> str:
             if self.type == self.BOOLEAN:
                 if input:
                     return f"{self.prefix}"
@@ -86,22 +85,15 @@ class CommandLineTool:
                     return ""
 
             input_arg_str = ""
-            if self.type == self.STRING:
-                string_quote = "'"
-            else:
-                string_quote = ""
-
             if not input_arg:
                 input_arg = self.default
 
             if self.array:
                 itm_sep = self.item_separator if self.item_separator else " "
-                input_arg_str += f"{string_quote}{itm_sep}{string_quote}".join(
-                    input_arg
-                )
+                input_arg_str += f"{itm_sep}".join(input_arg)
 
             else:
-                input_arg_str += f"{string_quote}{input_arg}{string_quote}"
+                input_arg_str += f"{input_arg}"
 
             if self.prefix:
                 sep = " " if self.separate else ""
@@ -112,7 +104,7 @@ class CommandLineTool:
         def __lt__(self, other) -> bool:
             return self.position < other.position
 
-    def __init__(self, cwl_file: str):
+    def __init__(self, cwl_file: str) -> None:
         with open(cwl_file, "r") as cwl_file:
             cwl = yaml.safe_load(cwl_file)
 
@@ -139,7 +131,7 @@ class CommandLineTool:
         # TODO: IMPLEMENT ME!
         return True
 
-    def __set_inputs(self, cwl_inputs):
+    def __set_inputs(self, cwl_inputs) -> None:
         if isinstance(cwl_inputs, list):
             for inpt in cwl_inputs:
                 id = inpt["id"]
@@ -198,14 +190,14 @@ class CommandLineTool:
 
         self.__inputs.sort()
 
-    def __set_outputs(self, cwl_outputs):
+    def __set_outputs(self, cwl_outputs) -> None:
         self.__set_outputs = cwl_outputs
 
     @property
     def command_template(self) -> str:
-        return f"COMMAND TEMPLATE:\n{self.__base_command} {' '.join([str(input_arg) for input_arg in self.__inputs])}"
+        return f"COMMAND TEMPLATE:\n{self.__base_command} {' '.join([input_arg.to_string_template() for input_arg in self.__inputs])}"
 
-    def get_command(self, **kwargs):
+    def get_command(self, **kwargs) -> str:
         # TODO: handle case where kwargs has unnecessary args ?
         args = []
         for input_arg in self.__inputs:
@@ -214,7 +206,7 @@ class CommandLineTool:
 
             elif input_arg.default:
                 args.append(input_arg.to_string())
-            
+
             elif input_arg.optional:
                 continue
 
@@ -229,6 +221,7 @@ class CommandLineTool:
         exit_code = os.system(self.get_command(**kwargs))
         print(f"EXIT CODE: {exit_code}")
 
+
 class Workflow:
     def __init__(self, cwl: Dict[str, Any]) -> None:
         self.cmds = []
@@ -242,7 +235,7 @@ class Workflow:
 
     def __set_inputs(self, cwl_inputs):
         if isinstance(cwl_inputs, list):
-            self.inputs = copy.deepcopy(cwl_inputs)
+            self.inputs = cwl_inputs
 
         elif isinstance(cwl_inputs, dict):
             for id, input_opts in cwl_inputs.items():
