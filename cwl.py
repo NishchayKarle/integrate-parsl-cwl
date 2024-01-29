@@ -152,7 +152,7 @@ class CommandLineTool:
 
         cwl_schema = Schema(
             {
-                "cwlVersion": str,
+                "cwlVersion": str, # TODO: regex
                 "baseCommand": Or([str], str, error="Invalid type for Base Command"),
                 "class": And(str, lambda cls: cls == "CommandLineTool", error="Invalid type for class"),
                 "inputs": Or(
@@ -160,11 +160,11 @@ class CommandLineTool:
                         str: Schema(
                             {
                                 "type": str,
-                                Optional("default"): Or(str, int, float, bool, list, dict, None),
+                                Optional("default"): Or(str, int, float, bool, list, dict, None), # TODO:? 
                                 Optional("inputBinding"): Or(
                                     Schema(
                                         {
-                                            "position": int,
+                                            "position": int, #TODO: Handle case when position is not necessary
                                             Optional("prefix"): str,
                                             Optional("separate"): bool,
                                             Optional("itemSeparator"): str,
@@ -180,11 +180,11 @@ class CommandLineTool:
                             {
                                 "id": str,
                                 "type": str,
-                                Optional("default"): Or(str, int, float, bool, list, dict, None),
+                                Optional("default"): Or(str, int, float, bool, list, dict, None), # TODO:?
                                 Optional("inputBinding"): Or(
                                     Schema(
                                         {
-                                            "position": int,
+                                            "position": int, #TODO: Handle case when position is not necessary
                                             Optional("prefix"): str,
                                             Optional("separate"): bool,
                                             Optional("itemSeparator"): str,
@@ -196,6 +196,7 @@ class CommandLineTool:
                         )
                     ],
                 ),
+                # TODO: Handle outputs and additional data
                 Optional("outputs"): Or(str, int, float, bool, list, dict, None),
                 Optional("stdout"): Or(str, int, float, bool, list, dict, None),
             }
