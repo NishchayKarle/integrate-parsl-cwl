@@ -175,9 +175,7 @@ class CommandLineTool:
                 default = inpt_arg_opts.get("default", None)
                 position = inpt_arg_opts.get("inputBinding", {}).get("position", None)
                 prefix = inpt_arg_opts.get("inputBinding", {}).get("prefix", None)
-                item_separator = inpt_arg_opts.get("inputBinding", {}).get(
-                    "itemSeparator", None
-                )
+                item_separator = inpt_arg_opts.get("inputBinding", {}).get("itemSeparator", None)
                 separate = inpt_arg_opts.get("inputBinding", {}).get("separate", True)
 
                 self.__inputs.append(
@@ -209,7 +207,10 @@ class CommandLineTool:
         Returns:
             str: template string to show example usage
         """
-        return f"COMMAND TEMPLATE:\n{self.__base_command} {' '.join([input_arg.to_string_template() for input_arg in self.__inputs])}"
+        return (
+            f"COMMAND TEMPLATE:\n{self.__base_command} "
+            f"{' '.join([input_arg.to_string_template() for input_arg in self.__inputs])}"
+        )
 
     def get_command(self, **kwargs) -> str:
         """Shell command to be run.
