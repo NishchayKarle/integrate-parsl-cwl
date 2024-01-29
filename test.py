@@ -1,0 +1,35 @@
+from cwl import CommandLineTool
+
+if __name__ == "__main__":
+    # ip = CommandLineTool("./cwl_files/ip.cwl")
+    # print(ip.command_template)
+    # print("-------")
+    # print(ip.get_command(example_string="abcd", example_int=55, example_file="input.txt"))
+    # print("-------")
+
+    # bwa = CommandLineTool("./cwl_files/bwa-mem.cwl")
+    # print(bwa.command_template)
+
+    # cmd = CommandLineTool("./echo/hello_world.cwl")
+    # print(cmd.command_template)
+    # print(cmd.get_command())
+    # cmd.run()
+    # print()
+    # print()
+    # cmd2 = CommandLineTool("./echo/hello_world2.cwl")
+    # print(cmd2.command_template)
+    # print(cmd2.get_command(message="king", message2="james"))
+    # cmd2.run(message="king", message2="james")
+    # print()
+    # print()
+    # wc_cmd = CommandLineTool("./cwl_files/wc.cwl")
+    # print(wc_cmd.command_template)
+    # print(wc_cmd.get_command(text_file="./cwl_files/wc.cwl"))
+    # wc_cmd.run(text_file="./cwl_files/wc.cwl")
+
+    rm = CommandLineTool("./cwl_files/rm.cwl")
+    print("COMMAND TO RUN: ", rm.get_command(text_file="1.txt"))
+    rm.run(text_file="1.txt")
+    print(2 * "\n")
+    print("COMMAND TO RUN: ", rm.get_command(text_file="1.txt", force=True))
+    rm.run(text_file="1.txt", force=True)
