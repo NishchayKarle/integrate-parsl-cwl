@@ -5,6 +5,7 @@ import pprint
 
 
 class CommandLineTool:
+    #TODO: add slots?
     class __InputArgument__:
         __slots__ = (
             "id",
