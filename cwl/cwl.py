@@ -2,10 +2,11 @@ import yaml
 import os
 from typing import Dict, Any, Optional, List, Union
 import pprint
+from collections import namedtuple
 
 
 class CommandLineTool:
-    #TODO: add slots?
+    # TODO: add slots?
     class __InputArgument__:
         __slots__ = (
             "id",
@@ -120,14 +121,14 @@ class CommandLineTool:
             with open(cwl_file, "r") as cwl_file:
                 cwl = yaml.safe_load(cwl_file)
 
-        #TODO: change exception types
+        # TODO: change exception types
         except Exception as exp:
             raise Exception(exp)
 
         try:
             self.validate_cwl(cwl)
 
-        #TODO: change exception types
+        # TODO: change exception types
         except Exception as exp:
             raise Exception(exp, "Invalid CommandLineTool CWL file")
 
@@ -141,7 +142,7 @@ class CommandLineTool:
             self.__base_command = self.__cwl["baseCommand"]
 
         self.__inputs: List[self.__InputArgument__] = []
-        self.__outputs = []
+        self.__outputs = None
 
         self.__set_inputs(self.__cwl["inputs"])
         self.__set_outputs(self.__cwl["outputs"])
@@ -172,6 +173,7 @@ class CommandLineTool:
                 "class": And(str, lambda cls: cls == "CommandLineTool", error="Invalid type for class"),
                 "inputs": Or(
                     {
+                        # TODO: only accept python variable name strings
                         str: Schema(
                             {
                                 "type": str,
@@ -193,6 +195,7 @@ class CommandLineTool:
                     [
                         Schema(
                             {
+                                # TODO: only accept python variable name strings
                                 "id": str,
                                 "type": str,
                                 Optional("default"): Or(str, int, float, bool, list, dict, None),  # TODO:?
@@ -211,16 +214,19 @@ class CommandLineTool:
                         )
                     ],
                 ),
-                # TODO: Handle outputs and additional data
-                Optional("outputs"): Or(str, int, float, bool, list, dict, None),
-                Optional("stdout"): Or(str, int, float, bool, list, dict, None),
+                Optional("outputs"): Or(
+                    {str: Schema({"type": "stdout"})},
+                    [Schema({"id": str, "type": "stdout"})],
+                    error="Invalid type for outputs",
+                ),
+                Optional(any): any,
             }
         )
 
         return cwl_schema.validate(cwl_content)
 
     def __set_inputs(self, cwl_inputs: Union[List[Dict[str, Any]], Dict[str, any]]) -> None:
-        """Set inputs from CWL
+        """Set input options from CWL
 
         Args:
             cwl_inputs (Union[List[Dict[str, Any]], Dict[str, any]]): CWL inputs
@@ -278,9 +284,21 @@ class CommandLineTool:
 
         self.__inputs.sort()
 
-    def __set_outputs(self, cwl_outputs) -> None:
-        #TODO: IMPLEMENT ME!
-        self.__set_outputs = cwl_outputs
+    def __set_outputs(self, cwl_outputs: Union[List[Dict[str, Any]], Dict[str, any]]) -> None:
+        """Set output options from CWL
+
+        Args:
+            cwl_outputs (Union[List[Dict[str, Any]], Dict[str, any]]): CWL outputs
+        """
+        if isinstance(cwl_outputs, list):
+            id = cwl_outputs["id"]
+            type = "stdout"
+
+        elif isinstance(cwl_outputs, dict):
+            id, type = list(cwl_outputs.items())[0]
+
+        output = namedtuple("Output", ["id", "type"])
+        self.__outputs = output
 
     @property
     def command_template(self) -> str:
@@ -302,7 +320,7 @@ class CommandLineTool:
         """
         # TODO: handle case where kwargs has unnecessary args ?
         if len(kwargs) > len(self.__inputs):
-            #TODO: change exception types
+            # TODO: change exception types
             raise Exception("Too many arguments provided to the command")
 
         args = []
@@ -317,7 +335,7 @@ class CommandLineTool:
                 continue
 
             else:
-                #TODO: change exception types
+                # TODO: change exception types
                 raise Exception(f"Input parameter(s) missing: {input_arg.id}")
 
         return f"{self.__base_command} {' '.join(args)}"
