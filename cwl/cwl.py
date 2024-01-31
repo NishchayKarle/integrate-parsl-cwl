@@ -130,7 +130,7 @@ class CommandLineTool:
 
         # TODO: change exception types
         except Exception as exp:
-            raise Exception(exp, "Invalid CommandLineTool CWL file")
+            raise Exception(exp, "Invalid CWL file")
 
         self.__file = cwl_file
         self.__cwl = cwl
@@ -190,34 +190,43 @@ class CommandLineTool:
                                     {},
                                 ),
                             }
-                        )
+                        ),
                     },
-                    [
-                        Schema(
-                            {
-                                # TODO: only accept python variable name strings
-                                "id": str,
-                                "type": str,
-                                Optional("default"): Or(str, int, float, bool, list, dict, None),  # TODO:?
-                                Optional("inputBinding"): Or(
-                                    Schema(
-                                        {
-                                            "position": int,  # TODO: Handle case when position is not necessary
-                                            Optional("prefix"): str,
-                                            Optional("separate"): bool,
-                                            Optional("itemSeparator"): str,
-                                        }
+                    And(
+                        [
+                            Schema(
+                                {
+                                    # TODO: only accept python variable name strings
+                                    "id": str,
+                                    "type": str,
+                                    Optional("default"): Or(str, int, float, bool, list, dict, None),  # TODO:?
+                                    Optional("inputBinding"): Or(
+                                        Schema(
+                                            {
+                                                "position": int,  # TODO: Handle case when position is not necessary
+                                                Optional("prefix"): str,
+                                                Optional("separate"): bool,
+                                                Optional("itemSeparator"): str,
+                                            }
+                                        ),
+                                        {},
                                     ),
-                                    {},
-                                ),
-                            }
-                        )
-                    ],
+                                }
+                            ),
+                        ],
+                        len,
+                        error="Invalid List/Empty List",
+                    ),
+                    error="Invalid inputs",
                 ),
                 Optional("outputs"): Or(
                     {str: Schema({"type": "stdout"})},
-                    [Schema({"id": str, "type": "stdout"})],
-                    error="Invalid type for outputs",
+                    And(
+                        [Schema({"id": str, "type": "stdout"})],
+                        len,
+                        error="Invalid List/Empty List",
+                    ),
+                    error="Invalid outputs",
                 ),
                 Optional(any): any,
             }
