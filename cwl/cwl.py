@@ -468,7 +468,7 @@ class CommandLineTool:
         return cmd_args
 
     def run_local(self, **kwargs):
-        # local testing run function
+        """Local run of the command"""
         print("RESULT OF RUNNING COMMAND LINE TOOL:")
         exit_code = os.system(self.get_command(**kwargs))
         print(f"EXIT CODE: {exit_code}")
