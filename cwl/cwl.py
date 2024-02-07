@@ -143,10 +143,6 @@ class CommandLineTool:
 
         Args:
             cwl_file (str): CWL specs file for the Command Line Tool
-
-        Raises:
-            Exception: _description_
-            Exception: _description_
         """
         try:
             with open(cwl_file, "r") as cwl_file:
@@ -367,7 +363,6 @@ class CommandLineTool:
                 outputs.append(__OutputArgument(id, type))
 
         self.__outputs = outputs
-        print(self.__outputs)
 
     @property
     def command_template(self) -> str:
