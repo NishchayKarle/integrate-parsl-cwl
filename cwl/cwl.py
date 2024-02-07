@@ -6,7 +6,6 @@ from collections import namedtuple
 
 
 class CommandLineTool:
-    # TODO: add slots?
     class __InputArgument:
         __slots__ = (
             "id",
@@ -146,7 +145,6 @@ class CommandLineTool:
             cwl_file (str): CWL specs file for the Command Line Tool
 
         Raises:
-            #TODO: change exception types
             Exception: _description_
             Exception: _description_
         """
@@ -154,14 +152,12 @@ class CommandLineTool:
             with open(cwl_file, "r") as cwl_file:
                 cwl = yaml.safe_load(cwl_file)
 
-        # TODO: change exception types
         except Exception as exp:
             raise Exception(exp)
 
         try:
             self.validate_cwl(cwl)
 
-        # TODO: change exception types
         except Exception as exp:
             raise Exception(exp, "Invalid CWL file")
 
@@ -199,12 +195,11 @@ class CommandLineTool:
         Returns:
             Dict[str, Any]: Original CWL contents if valid
         """
-        # TODO: COMPLETE ME!
         from schema import Schema, And, Optional, Or
 
         cwl_schema = Schema(
             {
-                "cwlVersion": str,  # TODO: regex
+                "cwlVersion": str,
                 "baseCommand": Or([str], str, error="Invalid type for Base Command"),
                 "class": And(
                     str,
@@ -213,12 +208,9 @@ class CommandLineTool:
                 ),
                 "inputs": Or(
                     {
-                        # TODO: only accept python variable name strings
                         str: Schema(
                             {
-                                # TODO: valid types only
                                 "type": str,
-                                # TODO: check if default value matches type above
                                 Optional("default"): any,
                                 Optional("inputBinding"): Schema(
                                     {
@@ -235,12 +227,9 @@ class CommandLineTool:
                         [
                             Schema(
                                 {
-                                    # TODO: only accept python variable name strings
                                     "id": str,
-                                    # TODO: valid types only
                                     "type": str,
-                                    # TODO: check if default value matches type above
-                                    Optional("default"): Or(str, int, float, bool, list, dict, None),  # TODO:?
+                                    Optional("default"): Or(str, int, float, bool, list, dict, None),
                                     Optional("inputBinding"): Schema(
                                         {
                                             Optional("position"): int,
@@ -412,7 +401,6 @@ class CommandLineTool:
                 continue
 
             else:
-                # TODO: change exception types
                 raise Exception(f"Input parameter(s) missing: {input_arg.id}")
 
         return f"{self.__base_command} {' '.join(input_args)}"
@@ -425,7 +413,6 @@ class CommandLineTool:
         Returns:
             str: string of the shell command that is to be run
         """
-        # TODO: handle case where kwargs has unnecessary args ?
         cmd_args = {
             "command": None,
             "stdout": None,
@@ -490,57 +477,3 @@ class CommandLineTool:
         print("RESULT OF RUNNING COMMAND LINE TOOL:")
         exit_code = os.system(self.get_command(**kwargs))
         print(f"EXIT CODE: {exit_code}")
-
-
-class Workflow:
-    def __init__(self, cwl: Dict[str, Any]) -> None:
-        self.cmds = []
-        self.inputs = []
-        self.outputs = []
-        self.steps = []
-
-        self.__extract_commands_from_cwl(cwl)
-        self.__set_inputs(cwl["inputs"])
-        self.__set_outputs(cwl["outputs"])
-
-    def __set_inputs(self, cwl_inputs):
-        if isinstance(cwl_inputs, list):
-            self.inputs = cwl_inputs
-
-        elif isinstance(cwl_inputs, dict):
-            for id, input_opts in cwl_inputs.items():
-                input1 = {"id": id}
-                input1.update(input_opts)
-                self.inputs.append(input1)
-
-        else:
-            print("ERROR")
-
-    def __set_outputs(self, cwl_outputs):
-        self.__set_outputs = cwl_outputs
-
-
-def extract_commands_from_cwl(cwl, path):
-    cmds = []
-
-    with open(os.path.join(path, cwl), "r") as cwl_file:
-        cwl_content = yaml.safe_load(cwl_file)
-
-        # Check if CWL file is a CommandLineTool
-        if "class" in cwl_content and cwl_content["class"] == "CommandLineTool":
-            cmdlinetool = CommandLineTool(cwl_content)
-            return [cmdlinetool]
-
-        # Check if CWL file is a Workflow
-        elif "class" in cwl_content and cwl_content["class"] == "Workflow":
-            # Extract the base command from the first step
-            for step, todo in cwl_content.get("steps", {}).items():
-                if step:
-                    run_cwl = todo.get("run", "")
-                    if isinstance(run_cwl, str):
-                        cmdlinetool = extract_commands_from_cwl(run_cwl, path)
-                    cmds.extend(cmdlinetool)
-        else:
-            raise Exception("ERROR")
-
-    return cmds
