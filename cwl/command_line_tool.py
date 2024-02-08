@@ -298,56 +298,34 @@ class CommandLineTool:
             cwl_inputs (Union[List[Dict[str, Any]], Dict[str, any]]): CWL inputs
         """
         inputs = []
-        if isinstance(cwl_inputs, list):
-            for inpt in cwl_inputs:
-                id = inpt["id"]
-                type = inpt["type"].rstrip("[]").rstrip("?")
-                array = True if "[]" in inpt["type"] else False
-                optional = True if "?" in inpt["type"] else False
-                default = inpt.get("default", None)
-                position = inpt.get("inputBinding", {}).get("position", None)
-                prefix = inpt.get("inputBinding", {}).get("prefix", None)
-                item_separator = inpt.get("inputBinding", {}).get("itemSeparator", None)
-                separate = inpt.get("inputBinding", {}).get("separate", True)
 
-                inputs.append(
-                    InputArgument(
-                        id,
-                        type,
-                        array,
-                        optional,
-                        default,
-                        position,
-                        prefix,
-                        item_separator,
-                        separate,
-                    )
-                )
+        def process_input(id, inpt):
+            type = inpt["type"].rstrip("[]").rstrip("?")
+            array = "[]" in inpt["type"]
+            optional = "?" in inpt["type"]
+            default = inpt.get("default", None)
+            position = inpt.get("inputBinding", {}).get("position", None)
+            prefix = inpt.get("inputBinding", {}).get("prefix", None)
+            item_separator = inpt.get("inputBinding", {}).get("itemSeparator", None)
+            separate = inpt.get("inputBinding", {}).get("separate", True)
+
+            return InputArgument(
+                id,
+                type,
+                array,
+                optional,
+                default,
+                position,
+                prefix,
+                item_separator,
+                separate,
+            )
+
+        if isinstance(cwl_inputs, list):
+            inputs.extend(process_input(inpt["id"], inpt) for inpt in cwl_inputs)
 
         elif isinstance(cwl_inputs, dict):
-            for id, inpt_arg_opts in cwl_inputs.items():
-                type = inpt_arg_opts["type"].rstrip("[]").rstrip("?")
-                array = True if "[]" in inpt_arg_opts["type"] else False
-                optional = True if "?" in inpt_arg_opts["type"] else False
-                default = inpt_arg_opts.get("default", None)
-                position = inpt_arg_opts.get("inputBinding", {}).get("position", None)
-                prefix = inpt_arg_opts.get("inputBinding", {}).get("prefix", None)
-                item_separator = inpt_arg_opts.get("inputBinding", {}).get("itemSeparator", None)
-                separate = inpt_arg_opts.get("inputBinding", {}).get("separate", True)
-
-                inputs.append(
-                    InputArgument(
-                        id,
-                        type,
-                        array,
-                        optional,
-                        default,
-                        position,
-                        prefix,
-                        item_separator,
-                        separate,
-                    )
-                )
+            inputs.extend(process_input(id, inpt_arg_opts) for id, inpt_arg_opts in cwl_inputs.items())
 
         inputs.sort()
         self.__inputs = inputs
@@ -387,6 +365,11 @@ class CommandLineTool:
             f"COMMAND TEMPLATE:\n{self.__base_command} "
             f"{' '.join([input_arg.to_string_template() for input_arg in self.__inputs])}"
         )
+
+    @property
+    def version(self) -> str:
+        """CWL version"""
+        return self.__version
 
     def get_command(self, **kwargs) -> str:
         """Shell command to be run.
