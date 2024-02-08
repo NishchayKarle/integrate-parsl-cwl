@@ -5,139 +5,140 @@ import pprint
 from collections import namedtuple
 
 
+class InputArgument:
+    __slots__ = (
+        "id",
+        "type",
+        "array",
+        "optional",
+        "default",
+        "position",
+        "prefix",
+        "item_separator",
+        "separate",
+    )
+
+    BOOLEAN = "boolean"
+    DOUBLE = "double"
+    DIRECTORY = "Directory"
+    FILE = "File"
+    FLOAT = "float"
+    INT = "int"
+    LONG = "long"
+    STRING = "string"
+
+    def __init__(
+        self,
+        id: str,
+        type: str,
+        array: bool,
+        optional: bool,
+        default: Optional[Any],
+        position: Optional[int],
+        prefix: Optional[str],
+        item_separator: Optional[str],
+        separate: bool,
+    ) -> None:
+        """Class to represent input arguments for a command line tool
+
+        Args:
+            id (str): ID of the input argument
+            type (str): Type of the input argument - string, int, long, double, float, boolean, Directory, File
+            array (bool): Is the type an array?
+            optional (bool): Is the input argument optional?
+            default (Optional[Any]): Default value for the input argument
+            position (Optional[int]): Position of the input argument
+            prefix (Optional[str]): Add a prefix to the input argument
+            item_separator (Optional[str]): Separator for items in the array
+            separate (bool): Add a space between the prefix and the input argument
+        """
+        self.id = id
+        self.type = type
+        self.array = array
+        self.optional = optional
+        self.default = default
+        self.position = position
+        self.prefix = prefix
+        self.item_separator = item_separator
+        self.separate = separate
+
+    def __repr__(self) -> str:
+        return str({slot: getattr(self, slot) for slot in self.__slots__})
+
+    def __str__(self) -> str:
+        return str({slot: getattr(self, slot) for slot in self.__slots__})
+
+    def to_string_template(self) -> str:
+        """Template string representation of the input argument. Like [-attr=<value>]"""
+        if self.type == self.BOOLEAN:
+            return f"[{self.prefix}]"
+
+        input_arg_str = ""
+        if self.array:
+            itm_sep = self.item_separator if self.item_separator else " "
+            input_arg_str += f"<{self.id}_1{itm_sep}...{itm_sep}{self.id}_n>"
+
+        else:
+            input_arg_str += f"<{self.id}>"
+
+        if self.prefix:
+            sep = " " if self.separate else ""
+            input_arg_str = f"{self.prefix}{sep}{input_arg_str}"
+
+        if self.optional:
+            input_arg_str = f"[{input_arg_str}]"
+
+        return input_arg_str
+
+    def to_string(self, input_arg: Any = None) -> str:
+        """String representation of the input argument
+
+        Args:
+            input_arg (Any, optional): input arg value. Defaults to None.
+        """
+        if self.type == self.BOOLEAN:
+            if input:
+                return f"{self.prefix}"
+
+            else:
+                return ""
+
+        input_arg_str = ""
+        if not input_arg:
+            input_arg = self.default
+
+        if self.type == self.STRING:
+            string_quote = "'"
+        else:
+            string_quote = ""
+
+        if self.array:
+            itm_sep = self.item_separator if self.item_separator else " "
+            input_arg_str += f"{string_quote}{itm_sep}{string_quote}".join(input_arg)
+
+        else:
+            input_arg_str += f"{string_quote}{input_arg}{string_quote}"
+
+        if self.prefix:
+            sep = " " if self.separate else ""
+            input_arg_str = f"{self.prefix}{sep}{input_arg_str}"
+
+        return input_arg_str
+
+    def __lt__(self, other) -> bool:
+        if self.position is None and other.position is None:
+            return True
+
+        if self.position is None:
+            return False
+
+        if other.position is None:
+            return True
+
+        return self.position < other.position
+
+
 class CommandLineTool:
-    class __InputArgument:
-        __slots__ = (
-            "id",
-            "type",
-            "array",
-            "optional",
-            "default",
-            "position",
-            "prefix",
-            "item_separator",
-            "separate",
-        )
-
-        BOOLEAN = "boolean"
-        DOUBLE = "double"
-        DIRECTORY = "Directory"
-        FILE = "File"
-        FLOAT = "float"
-        INT = "int"
-        LONG = "long"
-        STRING = "string"
-
-        def __init__(
-            self,
-            id: str,
-            type: str,
-            array: bool,
-            optional: bool,
-            default: Optional[Any],
-            position: Optional[int],
-            prefix: Optional[str],
-            item_separator: Optional[str],
-            separate: bool,
-        ) -> None:
-            """Class to represent input arguments for a command line tool
-
-            Args:
-                id (str): ID of the input argument
-                type (str): Type of the input argument - string, int, long, double, float, boolean, Directory, File
-                array (bool): Is the type an array?
-                optional (bool): Is the input argument optional?
-                default (Optional[Any]): Default value for the input argument
-                position (Optional[int]): Position of the input argument
-                prefix (Optional[str]): Add a prefix to the input argument
-                item_separator (Optional[str]): Separator for items in the array
-                separate (bool): Add a space between the prefix and the input argument
-            """
-            self.id = id
-            self.type = type
-            self.array = array
-            self.optional = optional
-            self.default = default
-            self.position = position
-            self.prefix = prefix
-            self.item_separator = item_separator
-            self.separate = separate
-
-        def __repr__(self) -> str:
-            return str({slot: getattr(self, slot) for slot in self.__slots__})
-
-        def __str__(self) -> str:
-            return str({slot: getattr(self, slot) for slot in self.__slots__})
-
-        def to_string_template(self) -> str:
-            """Template string representation of the input argument. Like [-attr=<value>]"""
-            if self.type == self.BOOLEAN:
-                return f"[{self.prefix}]"
-
-            input_arg_str = ""
-            if self.array:
-                itm_sep = self.item_separator if self.item_separator else " "
-                input_arg_str += f"<{self.id}_1{itm_sep}...{itm_sep}{self.id}_n>"
-
-            else:
-                input_arg_str += f"<{self.id}>"
-
-            if self.prefix:
-                sep = " " if self.separate else ""
-                input_arg_str = f"{self.prefix}{sep}{input_arg_str}"
-
-            if self.optional:
-                input_arg_str = f"[{input_arg_str}]"
-
-            return input_arg_str
-
-        def to_string(self, input_arg: Any = None) -> str:
-            """String representation of the input argument
-
-            Args:
-                input_arg (Any, optional): input arg value. Defaults to None.
-            """
-            if self.type == self.BOOLEAN:
-                if input:
-                    return f"{self.prefix}"
-
-                else:
-                    return ""
-
-            input_arg_str = ""
-            if not input_arg:
-                input_arg = self.default
-
-            if self.type == self.STRING:
-                string_quote = "'"
-            else:
-                string_quote = ""
-
-            if self.array:
-                itm_sep = self.item_separator if self.item_separator else " "
-                input_arg_str += f"{string_quote}{itm_sep}{string_quote}".join(input_arg)
-
-            else:
-                input_arg_str += f"{string_quote}{input_arg}{string_quote}"
-
-            if self.prefix:
-                sep = " " if self.separate else ""
-                input_arg_str = f"{self.prefix}{sep}{input_arg_str}"
-
-            return input_arg_str
-
-        def __lt__(self, other) -> bool:
-            if self.position is None and other.position is None:
-                return True
-
-            if self.position is None:
-                return False
-
-            if other.position is None:
-                return True
-
-            return self.position < other.position
-
     def __init__(self, cwl_file: str) -> None:
         """Command Line Tool
 
@@ -161,7 +162,7 @@ class CommandLineTool:
         self.__cwl = cwl
         self.__version = self.__cwl["cwlVersion"]
         self.__base_command = None
-        self.__inputs: List[self.__InputArgument] = None
+        self.__inputs: List[InputArgument] = None
         self.__outputs = None
 
         self.__set_cwl_args__()
@@ -310,7 +311,7 @@ class CommandLineTool:
                 separate = inpt.get("inputBinding", {}).get("separate", True)
 
                 inputs.append(
-                    self.__InputArgument(
+                    InputArgument(
                         id,
                         type,
                         array,
@@ -335,7 +336,7 @@ class CommandLineTool:
                 separate = inpt_arg_opts.get("inputBinding", {}).get("separate", True)
 
                 inputs.append(
-                    self.__InputArgument(
+                    InputArgument(
                         id,
                         type,
                         array,
