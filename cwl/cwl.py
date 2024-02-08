@@ -179,7 +179,7 @@ class CommandLineTool:
         return pprint.pformat(self.__cwl)
 
     @classmethod
-    def validate_cwl(self, cwl_content: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_cwl(cls, cwl_content: dict[str, any]) -> dict[str, any]:
         """Check if CWL is valid.
 
         Args:
@@ -191,11 +191,49 @@ class CommandLineTool:
         Returns:
             Dict[str, Any]: Original CWL contents if valid
         """
-        from schema import Schema, And, Optional, Or
+        from schema import Schema, And, Optional, Or, Regex, Forbidden
+
+        input_binding_schema = And(
+            Schema(
+                {
+                    Optional("position"): int,
+                    Optional("prefix"): str,
+                    Optional("separate"): bool,
+                    Optional("itemSeparator"): str,
+                },
+            ),
+            len,
+            error="empty inputBinding",
+        )
+
+        input_simple_types = ["boolean", "int", "long", "float", "double", "string", "File", "Directory"]
+        input_array_types = [f"{t}[]" for t in input_simple_types]
+        input_optional_types = [f"{t}?" for t in input_simple_types]
+
+        input_types_schema = Or(
+            *input_simple_types,
+            *input_array_types,
+            *input_optional_types,
+            {"type": "array", "items": input_simple_types},
+            error=(
+                "Invalid type for input."
+                "Should be one of boolean, int, long, float, double, string, File, Directory."
+                "Can be optional or array of these types"
+            ),
+        )
+
+        output_types_schema = Or(
+            "stdout",
+            "stderr",
+            "File",
+            "File[]",
+            {"type": "array", "items": "File"},
+            error="Invalid type for output. Should be stdout, stderr or File",
+        )
 
         cwl_schema = Schema(
             {
-                "cwlVersion": str,
+                "cwlVersion": Regex(r"^v[0-9]+(\.[0-9]+){0,2}$", error="Invalid CWL Version"),
                 "baseCommand": Or([str], str, error="Invalid type for Base Command"),
                 "class": And(
                     str,
@@ -204,18 +242,14 @@ class CommandLineTool:
                 ),
                 "inputs": Or(
                     {
-                        str: Schema(
+                        Regex(
+                            r"^[a-zA-Z_][a-zA-Z0-9_]*$",
+                            error="Invalid 'id'. Please use values that satisfy python variable name requirements",
+                        ): Schema(
                             {
-                                "type": str,
-                                Optional("default"): any,
-                                Optional("inputBinding"): Schema(
-                                    {
-                                        Optional("position"): int,
-                                        Optional("prefix"): str,
-                                        Optional("separate"): bool,
-                                        Optional("itemSeparator"): str,
-                                    }
-                                ),
+                                "type": input_types_schema,
+                                Optional("default"): Or(int, float, str, bool, list, error="Invalid default value"),
+                                Optional("inputBinding"): input_binding_schema,
                             }
                         ),
                     },
@@ -223,58 +257,35 @@ class CommandLineTool:
                         [
                             Schema(
                                 {
-                                    "id": str,
-                                    "type": str,
-                                    Optional("default"): Or(str, int, float, bool, list, dict, None),
-                                    Optional("inputBinding"): Schema(
-                                        {
-                                            Optional("position"): int,
-                                            Optional("prefix"): str,
-                                            Optional("separate"): bool,
-                                            Optional("itemSeparator"): str,
-                                        }
+                                    "id": Regex(
+                                        r"^[a-zA-Z_][a-zA-Z0-9_]*$",
+                                        error=(
+                                            "Invalid 'id'."
+                                            "Please use values that satisfy python variable name requirements"
+                                        ),
                                     ),
+                                    "type": input_array_types,
+                                    Optional("default"): Or(int, float, str, bool, list, error="Invalid default value"),
+                                    Optional("inputBinding"): input_binding_schema,
                                 }
                             ),
                         ],
                         len,
-                        error="Invalid List/Empty List. Should be a list of dicts",
+                        error="Invalid List/Empty List",
                     ),
-                    error="Invalid inputs. Should be a dict or list of dicts",
+                    error="Invalid inputs.",
                 ),
                 Optional("outputs"): Or(
-                    {
-                        str: Schema(
-                            {
-                                "type": Or(
-                                    "stdout",
-                                    "stderr",
-                                    "File",
-                                    error="Invalid type for output. Should be stdout, stderr or File",
-                                )
-                            }
-                        )
-                    },
+                    {str: Schema({"type": output_types_schema})},
                     And(
-                        [
-                            Schema(
-                                {
-                                    "id": str,
-                                    "type": Or(
-                                        "stdout",
-                                        "stderr",
-                                        "File",
-                                        error="Invalid type for output. Should be stdout, stderr or File",
-                                    ),
-                                }
-                            )
-                        ],
+                        [Schema({"id": str, "type": output_types_schema})],
                         len,
                         error="Invalid List/Empty List",
                     ),
                     error="Invalid outputs",
                 ),
-            }
+                Optional(any): any,
+            },
         )
 
         return cwl_schema.validate(cwl_content)
