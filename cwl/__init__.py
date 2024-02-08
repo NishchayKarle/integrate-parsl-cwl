@@ -1,1 +1,1 @@
-from cwl.cwl import CommandLineTool
+from cwl.command_line_tool import CommandLineTool
