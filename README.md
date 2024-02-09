@@ -93,7 +93,7 @@ Here's a generic bash_app that will work with all CommandLineTool apps
 
 ```python
 @bash_app
-def test(command, stdout: str = None, stderr: str = None, inputs: list[File] = [], outputs: list[File] = []):
+def test(command: str, stdout: str = None, stderr: str = None, inputs: list[File] = [], outputs: list[File] = []):
     return command
 ```
 
