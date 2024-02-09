@@ -148,18 +148,10 @@ class CommandLineTool:
         Args:
             cwl_file (str): CWL specs file for the Command Line Tool
         """
-        try:
-            with open(cwl_file, "r") as cwl_file:
-                cwl = yaml.safe_load(cwl_file)
+        with open(cwl_file, "r") as cwl_file:
+            cwl = yaml.safe_load(cwl_file)
 
-        except Exception as exp:
-            raise Exception(exp)
-
-        try:
-            self.validate_cwl(cwl)
-
-        except Exception as exp:
-            raise Exception(exp, "Invalid CWL file")
+        self.validate_cwl(cwl)
 
         self.__file = cwl_file
         self.__cwl = cwl
@@ -196,19 +188,17 @@ class CommandLineTool:
         Returns:
             Dict[str, Any]: Original CWL contents if valid
         """
-        from schema import Schema, And, Optional, Or, Regex, Forbidden
+        from schema import Schema, And, Optional, Or, Regex, SchemaError
 
         input_binding_schema = And(
-            Schema(
-                {
-                    Optional("position"): int,
-                    Optional("prefix"): str,
-                    Optional("separate"): bool,
-                    Optional("itemSeparator"): str,
-                },
-            ),
+            {
+                Optional("position"): int,
+                Optional("prefix"): str,
+                Optional("separate"): bool,
+                Optional("itemSeparator"): str,
+            },
             len,
-            error="empty inputBinding",
+            error="Empty inputBinding.",
         )
 
         input_simple_types = ["array", "boolean", "int", "long", "float", "double", "string", "File", "Directory"]
@@ -235,7 +225,7 @@ class CommandLineTool:
             error="Invalid type for output. Should be stdout, stderr or File",
         )
 
-        cwl_schema = Schema(
+        cmd_line_tool_schema = Schema(
             {
                 "cwlVersion": Regex(r"^v[0-9]+(\.[0-9]+){0,2}$", error="Invalid CWL Version"),
                 "baseCommand": Or([str], str, error="Invalid type for Base Command"),
@@ -248,79 +238,59 @@ class CommandLineTool:
                     {
                         Regex(
                             r"^[a-zA-Z_][a-zA-Z0-9_]*$",
-                            error="Invalid 'id'. Please use values that satisfy python variable name requirements",
-                        ): Schema(
-                            {
-                                "type": input_types_schema,
-                                Optional("items"): Or(*input_simple_types),
-                                Optional("default"): Or(int, float, str, bool, list, error="Invalid default value"),
-                                Optional("inputBinding"): input_binding_schema,
-                            }
-                        ),
+                        ): {
+                            "type": input_types_schema,
+                            Optional("items"): Or(*input_simple_types),
+                            Optional("default"): Or(int, float, str, bool, list, error="Invalid default value"),
+                            Optional("inputBinding"): input_binding_schema,
+                        }
                     },
-                    And(
-                        [
-                            Schema(
-                                {
-                                    "id": Regex(
-                                        r"^[a-zA-Z_][a-zA-Z0-9_]*$",
-                                        error=(
-                                            "Invalid 'id'."
-                                            " Please use values that satisfy python variable name requirements"
-                                        ),
-                                    ),
-                                    "type": input_simple_types,
-                                    Optional("items"): Or(*input_simple_types),
-                                    Optional("default"): Or(int, float, str, bool, list, error="Invalid default value"),
-                                    Optional("inputBinding"): input_binding_schema,
-                                }
+                    [
+                        {
+                            "id": Regex(
+                                r"^[a-zA-Z_][a-zA-Z0-9_]*$",
                             ),
-                        ],
-                        len,
-                        error="Invalid List/Empty List",
-                    ),
-                    error="Invalid inputs.",
+                            "type": input_simple_types,
+                            Optional("items"): Or(*input_simple_types),
+                            Optional("default"): Or(int, float, str, bool, list, error="Invalid default value"),
+                            Optional("inputBinding"): input_binding_schema,
+                        }
+                    ],
+                    error=("Invalid/Empty 'inputs'."),
                 ),
                 "outputs": Or(
                     {
                         Regex(
                             r"^[a-zA-Z_][a-zA-Z0-9_]*$",
-                            error="Invalid 'id'. Please use values that satisfy python variable name requirements",
-                        ): Schema(
-                            {
-                                "type": output_types_schema,
-                                Optional("items"): "File",
-                                Optional("outputBinding"): any,
-                            }
-                        )
+                        ): {
+                            "type": output_types_schema,
+                            Optional("items"): "File",
+                            Optional("outputBinding"): any,
+                        }
                     },
-                    And(
-                        [
-                            Schema(
-                                {
-                                    "id": Regex(
-                                        r"^[a-zA-Z_][a-zA-Z0-9_]*$",
-                                        error=(
-                                            "Invalid 'id'."
-                                            " Please use values that satisfy python variable name requirements"
-                                        ),
-                                    ),
-                                    "type": output_types_schema,
-                                    Optional("items"): "File",
-                                    Optional("outputBinding"): any,
-                                }
-                            )
-                        ],
-                        len,
-                        error="Invalid List/Empty List",
-                    ),
-                    error="Invalid outputs",
+                    [
+                        {
+                            "id": Regex(
+                                r"^[a-zA-Z_][a-zA-Z0-9_]*$",
+                            ),
+                            "type": output_types_schema,
+                            Optional("items"): "File",
+                            Optional("outputBinding"): any,
+                        }
+                    ],
+                    error=("Invalid/Empty 'outputs'."),
                 ),
                 Optional(any): any,
             },
         )
 
-        return cwl_schema.validate(cwl_content)
+        try:
+            return cmd_line_tool_schema.validate(cwl_content)
+
+        except SchemaError as e:
+            raise Exception(
+                "Invalid Cwl File for Command Line Tools\n" + "\nOR\n".join({exp for exp in e.errors if exp})
+            ) from None
 
     def __set_inputs(self, cwl_inputs: Union[List[Dict[str, Any]], Dict[str, any]]) -> None:
         """Set input options from CWL
