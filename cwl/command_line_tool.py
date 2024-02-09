@@ -138,6 +138,9 @@ class InputArgument:
         return self.position < other.position
 
 
+OutputArgument = namedtuple("Output", ["id", "type", "array"])
+
+
 class CommandLineTool:
     def __init__(self, cwl_file: str) -> None:
         """Command Line Tool
@@ -163,7 +166,7 @@ class CommandLineTool:
         self.__version = self.__cwl["cwlVersion"]
         self.__base_command = None
         self.__inputs: List[InputArgument] = None
-        self.__outputs = None
+        self.__outputs: List[OutputArgument] = None
 
         self.__set_cwl_args__()
 
@@ -228,6 +231,7 @@ class CommandLineTool:
             "stderr",
             "File",
             "File[]",
+            "array",
             error="Invalid type for output. Should be stdout, stderr or File",
         )
 
@@ -277,10 +281,33 @@ class CommandLineTool:
                     ),
                     error="Invalid inputs.",
                 ),
-                Optional("outputs"): Or(
-                    {str: Schema({"type": output_types_schema})},
+                "outputs": Or(
+                    {
+                        Regex(
+                            r"^[a-zA-Z_][a-zA-Z0-9_]*$",
+                            error="Invalid 'id'. Please use values that satisfy python variable name requirements",
+                        ): Schema(
+                            {
+                                "type": output_types_schema,
+                                Optional("items"): "File",
+                                Optional("outputBinding"): any,
+                            }
+                        )
+                    },
                     And(
-                        [Schema({"id": str, "type": output_types_schema})],
+                        [
+                            Schema(
+                                {
+                                    "id": Regex(
+                                        r"^[a-zA-Z_][a-zA-Z0-9_]*$",
+                                        error="Invalid 'id'. Please use values that satisfy python variable name requirements",
+                                    ),
+                                    "type": output_types_schema,
+                                    Optional("items"): "File",
+                                    Optional("outputBinding"): any,
+                                }
+                            )
+                        ],
                         len,
                         error="Invalid List/Empty List",
                     ),
@@ -344,20 +371,24 @@ class CommandLineTool:
             cwl_outputs (Union[List[Dict[str, Any]], Dict[str, any]]): CWL outputs
         """
         outputs = []
-        __OutputArgument = namedtuple("Output", ["id", "type"])
+
+        def process_output(id, output_arg):
+            type = output_arg["type"]
+            if type == "array":
+                type = output_arg["items"]
+                array = True
+
+            else:
+                type = output_arg["type"].rstrip("[]")
+                array = "[]" in output_arg["type"]
+
+            return OutputArgument(id, type, array)
 
         if isinstance(cwl_outputs, list):
-            for output in cwl_outputs:
-                id = cwl_outputs["id"]
-                type = cwl_outputs["type"]
-
-                outputs.append(__OutputArgument(id, type))
+            outputs.extend(process_output(output_arg["id"], output_arg) for output_arg in cwl_outputs)
 
         elif isinstance(cwl_outputs, dict):
-            for id, output_arg_opts in cwl_outputs.items():
-                type = output_arg_opts["type"]
-
-                outputs.append(__OutputArgument(id, type))
+            outputs.extend(process_output(id, output_arg_opts) for id, output_arg_opts in cwl_outputs.items())
 
         self.__outputs = outputs
 
@@ -424,25 +455,24 @@ class CommandLineTool:
         """Check if all the output arguments are provided"""
         stdout = None
         stderr = None
-        if self.__outputs:
-            for output_arg in self.__outputs:
-                """handle stdout and stderr"""
-                if output_arg.type == "stdout":
-                    if output_arg.id not in kwargs:
-                        raise Exception("value for stdout not provided")
+        for output_arg in self.__outputs:
+            """handle stdout and stderr"""
+            if output_arg.type == "stdout":
+                if output_arg.id not in kwargs:
+                    raise Exception("value for stdout not provided")
 
-                    else:
-                        stdout = kwargs[output_arg.id]
+                else:
+                    stdout = kwargs[output_arg.id]
 
-                if output_arg.type == "stderr":
-                    if output_arg.id not in kwargs:
-                        raise Exception("value for stderr not provided")
+            if output_arg.type == "stderr":
+                if output_arg.id not in kwargs:
+                    raise Exception("value for stderr not provided")
 
-                    else:
-                        stderr = kwargs[output_arg.id]
+                else:
+                    stderr = kwargs[output_arg.id]
 
-                if output_arg.type == "File" and output_arg.id not in kwargs:
-                    raise Exception(f"value for output file {output_arg.id} not provided")
+            if output_arg.type == "File" and output_arg.id not in kwargs:
+                raise Exception(f"value for output file {output_arg.id} not provided")
 
         from parsl.data_provider.files import File
 
@@ -450,13 +480,20 @@ class CommandLineTool:
         input_files = []
         for file in self.__inputs:
             if file.type == "File" and file.id in kwargs:
-                input_files.append(File(kwargs[file.id]))
+                if file.array:
+                    input_files.extend([File(f) for f in kwargs[file.id]])
+
+                else:
+                    input_files.append(File(kwargs[file.id]))
 
         """list output files"""
         output_files = []
-        if self.__outputs:
-            for file in self.__outputs:
-                if file.type == "File" and file.id in kwargs:
+        for file in self.__outputs:
+            if file.type == "File" and file.id in kwargs:
+                if file.array:
+                    output_files.extend([File(f) for f in kwargs[file.id]])
+
+                else:
                     output_files.append(File(kwargs[file.id]))
 
         cmd_args.update(
