@@ -31,13 +31,13 @@ class InputArgument:
         self,
         id: str,
         type: str,
-        array: bool,
-        optional: bool,
-        default: Optional[Any],
-        position: Optional[int],
-        prefix: Optional[str],
-        item_separator: Optional[str],
-        separate: bool,
+        array: bool = False,
+        optional: bool = False,
+        default: Optional[Any] = None,
+        position: Optional[int] = None,
+        prefix: Optional[str] = None,
+        item_separator: Optional[str] = None,
+        separate: bool = True,
     ) -> None:
         """Class to represent input arguments for a command line tool
 
@@ -114,7 +114,7 @@ class InputArgument:
 
         if self.array:
             itm_sep = self.item_separator if self.item_separator else " "
-            input_arg_str += f"{string_quote}{itm_sep}{string_quote}".join(input_arg)
+            input_arg_str += f"{itm_sep}".join([f"{string_quote}{arg}{string_quote}" for arg in input_arg])
 
         else:
             input_arg_str += f"{string_quote}{input_arg}{string_quote}"
@@ -174,13 +174,14 @@ class CommandLineTool:
             self.__base_command = self.__cwl["baseCommand"]
 
         self.__set_inputs(self.__cwl["inputs"])
-        self.__set_outputs(self.__cwl["outputs"])
+        if "outputs" in self.__cwl:
+            self.__set_outputs(self.__cwl["outputs"])
 
     def __str__(self) -> str:
         return pprint.pformat(self.__cwl)
 
     @classmethod
-    def validate_cwl(cls, cwl_content: dict[str, any]) -> dict[str, any]:
+    def validate_cwl(cls, cwl_content: Dict[str, any]) -> Dict[str, any]:
         """Check if CWL is valid.
 
         Args:
@@ -207,7 +208,7 @@ class CommandLineTool:
             error="empty inputBinding",
         )
 
-        input_simple_types = ["boolean", "int", "long", "float", "double", "string", "File", "Directory"]
+        input_simple_types = ["array", "boolean", "int", "long", "float", "double", "string", "File", "Directory"]
         input_array_types = [f"{t}[]" for t in input_simple_types]
         input_optional_types = [f"{t}?" for t in input_simple_types]
 
@@ -215,10 +216,9 @@ class CommandLineTool:
             *input_simple_types,
             *input_array_types,
             *input_optional_types,
-            {"type": "array", "items": input_simple_types},
             error=(
                 "Invalid type for input."
-                "Should be one of boolean, int, long, float, double, string, File, Directory."
+                "Should be one of array, boolean, int, long, float, double, string, File, Directory."
                 "Can be optional or array of these types"
             ),
         )
@@ -228,7 +228,6 @@ class CommandLineTool:
             "stderr",
             "File",
             "File[]",
-            {"type": "array", "items": "File"},
             error="Invalid type for output. Should be stdout, stderr or File",
         )
 
@@ -249,6 +248,7 @@ class CommandLineTool:
                         ): Schema(
                             {
                                 "type": input_types_schema,
+                                Optional("items"): Or(*input_simple_types),
                                 Optional("default"): Or(int, float, str, bool, list, error="Invalid default value"),
                                 Optional("inputBinding"): input_binding_schema,
                             }
@@ -265,7 +265,8 @@ class CommandLineTool:
                                             "Please use values that satisfy python variable name requirements"
                                         ),
                                     ),
-                                    "type": input_array_types,
+                                    "type": input_simple_types,
+                                    Optional("items"): Or(*input_simple_types),
                                     Optional("default"): Or(int, float, str, bool, list, error="Invalid default value"),
                                     Optional("inputBinding"): input_binding_schema,
                                 }
@@ -299,15 +300,21 @@ class CommandLineTool:
         """
         inputs = []
 
-        def process_input(id, inpt):
-            type = inpt["type"].rstrip("[]").rstrip("?")
-            array = "[]" in inpt["type"]
-            optional = "?" in inpt["type"]
-            default = inpt.get("default", None)
-            position = inpt.get("inputBinding", {}).get("position", None)
-            prefix = inpt.get("inputBinding", {}).get("prefix", None)
-            item_separator = inpt.get("inputBinding", {}).get("itemSeparator", None)
-            separate = inpt.get("inputBinding", {}).get("separate", True)
+        def process_input(id, input_arg):
+            if input_arg["type"] == "array":
+                type = input_arg["items"]
+                array = True
+
+            else:
+                type = input_arg["type"].rstrip("[]").rstrip("?")
+                array = "[]" in input_arg["type"]
+
+            optional = "?" in input_arg["type"]
+            default = input_arg.get("default", None)
+            position = input_arg.get("inputBinding", {}).get("position", None)
+            prefix = input_arg.get("inputBinding", {}).get("prefix", None)
+            item_separator = input_arg.get("inputBinding", {}).get("itemSeparator", None)
+            separate = input_arg.get("inputBinding", {}).get("separate", True)
 
             return InputArgument(
                 id,
@@ -322,7 +329,7 @@ class CommandLineTool:
             )
 
         if isinstance(cwl_inputs, list):
-            inputs.extend(process_input(inpt["id"], inpt) for inpt in cwl_inputs)
+            inputs.extend(process_input(input_arg["id"], input_arg) for input_arg in cwl_inputs)
 
         elif isinstance(cwl_inputs, dict):
             inputs.extend(process_input(id, inpt_arg_opts) for id, inpt_arg_opts in cwl_inputs.items())
@@ -417,24 +424,25 @@ class CommandLineTool:
         """Check if all the output arguments are provided"""
         stdout = None
         stderr = None
-        for output_arg in self.__outputs:
-            """handle stdout and stderr"""
-            if output_arg.type == "stdout":
-                if output_arg.id not in kwargs:
-                    raise Exception("value for stdout not provided")
+        if self.__outputs:
+            for output_arg in self.__outputs:
+                """handle stdout and stderr"""
+                if output_arg.type == "stdout":
+                    if output_arg.id not in kwargs:
+                        raise Exception("value for stdout not provided")
 
-                else:
-                    stdout = kwargs[output_arg.id]
+                    else:
+                        stdout = kwargs[output_arg.id]
 
-            if output_arg.type == "stderr":
-                if output_arg.id not in kwargs:
-                    raise Exception("value for stderr not provided")
+                if output_arg.type == "stderr":
+                    if output_arg.id not in kwargs:
+                        raise Exception("value for stderr not provided")
 
-                else:
-                    stderr = kwargs[output_arg.id]
+                    else:
+                        stderr = kwargs[output_arg.id]
 
-            if output_arg.type == "File" and output_arg.id not in kwargs:
-                raise Exception(f"value for output file {output_arg.id} not provided")
+                if output_arg.type == "File" and output_arg.id not in kwargs:
+                    raise Exception(f"value for output file {output_arg.id} not provided")
 
         from parsl.data_provider.files import File
 
@@ -446,9 +454,10 @@ class CommandLineTool:
 
         """list output files"""
         output_files = []
-        for file in self.__outputs:
-            if file.type == "File" and file.id in kwargs:
-                output_files.append(File(kwargs[file.id]))
+        if self.__outputs:
+            for file in self.__outputs:
+                if file.type == "File" and file.id in kwargs:
+                    output_files.append(File(kwargs[file.id]))
 
         cmd_args.update(
             {
