@@ -266,7 +266,7 @@ class CommandLineTool:
                                         r"^[a-zA-Z_][a-zA-Z0-9_]*$",
                                         error=(
                                             "Invalid 'id'."
-                                            "Please use values that satisfy python variable name requirements"
+                                            " Please use values that satisfy python variable name requirements"
                                         ),
                                     ),
                                     "type": input_simple_types,
@@ -300,7 +300,10 @@ class CommandLineTool:
                                 {
                                     "id": Regex(
                                         r"^[a-zA-Z_][a-zA-Z0-9_]*$",
-                                        error="Invalid 'id'. Please use values that satisfy python variable name requirements",
+                                        error=(
+                                            "Invalid 'id'."
+                                            " Please use values that satisfy python variable name requirements"
+                                        ),
                                     ),
                                     "type": output_types_schema,
                                     Optional("items"): "File",
