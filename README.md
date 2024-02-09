@@ -81,7 +81,6 @@ We’ll come back to configuration later in this tutorial. For now, we configure
 
 ```python
 import parsl
-import os
 from parsl.app.app import bash_app
 from parsl.configs.local_threads import config
 from parsl.data_provider.files import File
