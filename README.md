@@ -93,7 +93,7 @@ Here's a generic bash_app that will work with all CommandLineTool apps
 
 ```python
 @bash_app
-def test(command: str, stdout: str = None, stderr: str = None, inputs: list[File] = [], outputs: list[File] = []):
+def parsl_test(command: str, stdout: str = None, stderr: str = None, inputs: list[File] = [], outputs: list[File] = []):
     return command
 ```
 
@@ -144,7 +144,7 @@ cmd = {
 """
 
 # forward args to bash_app and wait for completion
-test(**cmd).result()
+parsl_test(**cmd).result()
 
 with open("find_stdout.txt", "r") as f:
     print(f.read())
@@ -165,7 +165,7 @@ cmd = {
 }
 """
 
-test(**cmd).result()
+parsl_test(**cmd).result()
 ```
 ---
 
@@ -202,41 +202,87 @@ cmd = {
 }
 """
 
-test(**cmd).result()
+parsl_test(**cmd).result()
 with open("wc_stdout.txt", "r") as f:
     print(f.read())
 ```
 ---
 
-### Example 3: touch.cwl - cwl for 'touch' command
+### Example 3: touch.cwl - create files
 ```yml
 cwlVersion: v1.0
 class: CommandLineTool
 baseCommand: touch
 
 inputs:
-  filename:
-    type: string
+  filenames:
+    type: string[]
     inputBinding:
       position: 1
+      separate: true
 
 outputs:
-  example_out:
-    type: File
+  output_files:
+    type: array
+    items: File
+    outputBinding:
+      glob: $(inputs.filenames)
 ```
 
 ```python
 touch = CommandLineTool("touch.cwl")
-cmd = touch.get_parsl_command_args(filename="file_name_1.txt", example_out="file_name_1.txt")
+cmd = touch.get_parsl_command_args(filenames=["file_name_1.txt", "file_name_2.txt"], output_files=["file_name_1.txt", "file_name_2.txt"])
 """
 cmd = {
-    'command': "touch 'file_name_1.txt'",
-    'stdout': None,
-    'stderr': None,
-    'inputs': [],
-    'outputs': [<File at 0x1065e22b0 url=file_name_1.txt scheme=file netloc= path=file_name_1.txt filename=file_name_1.txt>]
+  'command': "touch 'file_name_1.txt' 'file_name_2.txt'",
+  'stdout': None,
+  'stderr': None,
+  'inputs': [],
+  'outputs': [
+    <File at 0x107580880 url=file_name_1.txt scheme=file netloc= path=file_name_1.txt filename=file_name_1.txt>,
+    <File at 0x107566b20 url=file_name_2.txt scheme=file netloc= path=file_name_2.txt filename=file_name_2.txt>
+    ]
 }
 """
-test(**cmd).result()
+parsl_test(**cmd).result()
 ```
 ---
+
+### Example 4: cat.cwl - Cat contents of one file to another file
+```yml
+cwlVersion: v1.0
+class: CommandLineTool
+baseCommand: cat
+
+inputs:
+  from_file:
+    type: File
+    inputBinding:
+      position: 1
+    
+  to_file:
+    type: string
+    inputBinding:
+      position: 2
+      prefix: ">"
+      separate: true
+
+outputs:
+  output_file:
+    type: File
+```
+
+```python
+cat = CommandLineTool("cat.cwl")
+cmd = cat.get_parsl_command_args(from_file="cat.cwl", to_file="cat_stdout.txt", output_file="cat_stdout.txt")
+"""
+cmd = {
+  'command': "cat cat.cwl > 'cat_stdout.txt'",
+  'inputs': [<File at 0x104e3bb50 url=cat.cwl scheme=file netloc= path=cat.cwl filename=cat.cwl>],
+  'outputs': [<File at 0x104e3b040 url=cat_stdout.txt scheme=file netloc= path=cat_stdout.txt filename=cat_stdout.txt>],
+  'stderr': None,
+  'stdout': None
+}
+"""
+parsl_test(**cmd).result()
+```
