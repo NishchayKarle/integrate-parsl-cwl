@@ -97,7 +97,7 @@ def parsl_test(command: str, stdout: str = None, stderr: str = None, inputs: lis
     return command
 ```
 
-### Example 1: find.cwl - cwl for the 'find' command
+### Example 1: find.cwl - find command
 ```yml
 cwlVersion: v1.2
 class: CommandLineTool
@@ -169,7 +169,7 @@ parsl_test(**cmd).result()
 ```
 ---
 
-### Example 2: wc.cwl - cwl for 'word count' command
+### Example 2: wc.cwl - word count
 ```yml
 cwlVersion: v1.0
 class: CommandLineTool
