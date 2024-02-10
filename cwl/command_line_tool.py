@@ -222,7 +222,7 @@ class CommandLineTool:
             "File",
             "File[]",
             "array",
-            error="Invalid type for output. Should be stdout, stderr or File",
+            error="Invalid type for output. Should be stdout, stderr, File, File[] or array with items of type File",
         )
 
         cmd_line_tool_schema = Schema(
@@ -289,7 +289,7 @@ class CommandLineTool:
 
         except SchemaError as e:
             raise Exception(
-                "Invalid Cwl File for Command Line Tools\n" + "\nOR\n".join({exp for exp in e.errors if exp})
+                "Invalid Cwl File for Command Line Tools\n" + "\n".join({exp for exp in e.errors if exp})
             ) from None
 
     def __set_inputs(self, cwl_inputs: Union[List[Dict[str, Any]], Dict[str, any]]) -> None:
