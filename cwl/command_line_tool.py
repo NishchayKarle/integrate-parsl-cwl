@@ -52,6 +52,7 @@ class InputArgument:
             item_separator (Optional[str]): Separator for items in the array
             separate (bool): Add a space between the prefix and the input argument
         """
+
         self.id = id
         self.type = type
         self.array = array
@@ -148,6 +149,7 @@ class CommandLineTool:
         Args:
             cwl_file (str): CWL specs file for the Command Line Tool
         """
+
         with open(cwl_file, "r") as cwl_file:
             cwl = yaml.safe_load(cwl_file)
 
@@ -174,6 +176,28 @@ class CommandLineTool:
 
     def __str__(self) -> str:
         return pprint.pformat(self.__cwl)
+
+    def __call__(self, **kwargs: Any):
+        """Run the CWL CommandLineTool using Parsl
+
+        Expects: input and output arguments mentioned in the CWL file
+
+        Make sure to use the same names for function parameters as the input and output arguments in the CWL file.
+        """
+        from parsl.app.app import bash_app
+
+        @bash_app
+        def __parsl_bash_app__(
+            command: str,
+            stdout: str = None,
+            stderr: str = None,
+            inputs: list = [],
+            outputs: list = [],
+        ) -> str:
+            return command
+
+        args = self.__get_parsl_bash_app_args(**kwargs)
+        return __parsl_bash_app__(**args)
 
     @classmethod
     def validate_cwl(cls, cwl_content: Dict[str, any]) -> Dict[str, any]:
@@ -406,13 +430,12 @@ class CommandLineTool:
 
         return f"{self.__base_command} {' '.join(input_args)}"
 
-    def get_parsl_command_args(self, **kwargs) -> str:
+    def __get_parsl_bash_app_args(self, **kwargs) -> Dict[str, Any]:
         """Args needed to run the command using Parsl
 
-        kwargs: input parameters, output parameters, stdout, stderr
+        kwargs: values for inputs and outputs mentioned in the CWL file
 
-        Returns:
-            str: string of the shell command that is to be run
+        Returns: Dict[str, Any]: Args needed to run the command using Parsl
         """
         cmd_args = {
             "command": None,

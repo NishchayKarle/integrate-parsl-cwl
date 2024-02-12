@@ -7,11 +7,6 @@ from parsl.configs.local_threads import config
 parsl.load(config)
 
 
-@bash_app
-def parsl_test(command, stdout: str = None, stderr: str = None, inputs: list = [], outputs: list = []):
-    return command
-
-
 test_cwl_files = os.path.join(os.getcwd(), "tests", "test-cwl-files")
 test_runtime_files = os.path.join(os.getcwd(), "tests", "test-runtime-files")
 
@@ -35,10 +30,7 @@ def test_find() -> None:
     find = CommandLineTool(os.path.join(test_cwl_files, "find.cwl"))
 
     # Test 1
-    cmd1 = find.get_parsl_command_args(
-        dir=".", maxdepth=3, name="*.cwl", example_out=os.path.join(test_runtime_files, "find_stdout_1.txt")
-    )
-    parsl_test(**cmd1).result()
+    find(dir=".", maxdepth=3, name="*.cwl", example_out=os.path.join(test_runtime_files, "find_stdout_1.txt")).result()
 
     with open(os.path.join(test_runtime_files, "find_stdout_1.txt"), "r") as f1, open(
         os.path.join(test_runtime_files, "find_stdout_manual.txt"), "r"
@@ -46,10 +38,7 @@ def test_find() -> None:
         assert f1.readlines() == f2.readlines()
 
     # Test 2
-    cmd2 = find.get_parsl_command_args(
-        dir=".", name="*.cwl", example_out=os.path.join(test_runtime_files, "find_stdout_2.txt")
-    )
-    parsl_test(**cmd2).result()
+    find(dir=".", name="*.cwl", example_out=os.path.join(test_runtime_files, "find_stdout_2.txt")).result()
 
     with open(os.path.join(test_runtime_files, "find_stdout_2.txt"), "r") as f1, open(
         os.path.join(test_runtime_files, "find_stdout_manual.txt"), "r"
@@ -89,10 +78,9 @@ def test_find_list():
     find = CommandLineTool(os.path.join(test_cwl_files, "find.cwl"))
 
     # Test 1
-    cmd1 = find.get_parsl_command_args(
+    find(
         dir=".", maxdepth=3, name="*.cwl", example_out=os.path.join(test_runtime_files, "find_stdout_1_list.txt")
-    )
-    parsl_test(**cmd1).result()
+    ).result()
 
     with open(os.path.join(test_runtime_files, "find_stdout_1_list.txt"), "r") as f1, open(
         os.path.join(test_runtime_files, "find_stdout_manual_list.txt"), "r"
@@ -100,10 +88,7 @@ def test_find_list():
         assert f1.readlines() == f2.readlines()
 
     # Test 2
-    cmd2 = find.get_parsl_command_args(
-        dir=".", name="*.cwl", example_out=os.path.join(test_runtime_files, "find_stdout_2_list.txt")
-    )
-    parsl_test(**cmd2).result()
+    find(dir=".", name="*.cwl", example_out=os.path.join(test_runtime_files, "find_stdout_2_list.txt")).result()
 
     with open(os.path.join(test_runtime_files, "find_stdout_2_list.txt"), "r") as f1, open(
         os.path.join(test_runtime_files, "find_stdout_manual_list.txt"), "r"
@@ -134,7 +119,7 @@ def test_touch() -> None:
     touch = CommandLineTool(os.path.join(test_cwl_files, "touch.cwl"))
 
     # Test 1
-    cmd1 = touch.get_parsl_command_args(
+    touch(
         filenames=[
             os.path.join(test_runtime_files, "touch1.txt"),
             os.path.join(test_runtime_files, "touch2.txt"),
@@ -143,8 +128,7 @@ def test_touch() -> None:
             os.path.join(test_runtime_files, "touch1.txt"),
             os.path.join(test_runtime_files, "touch2.txt"),
         ],
-    )
-    parsl_test(**cmd1).result()
+    ).result()
 
     assert (
         os.system(
@@ -187,11 +171,10 @@ def test_word_count() -> None:
     word_count = CommandLineTool(os.path.join(test_cwl_files, "wc.cwl"))
 
     # Test 1
-    cmd1 = word_count.get_parsl_command_args(
+    word_count(
         text_file=os.path.join(test_cwl_files, "wc.cwl"),
         stdout=os.path.join(test_runtime_files, "word_count_stdout.txt"),
-    )
-    parsl_test(**cmd1).result()
+    ).result()
 
     with open(os.path.join(test_runtime_files, "word_count_stdout.txt"), "r") as f1, open(
         os.path.join(test_runtime_files, "word_count_stdout_manual.txt"), "r"
