@@ -191,8 +191,8 @@ class CommandLineTool:
             command: str,
             stdout: str = None,
             stderr: str = None,
-            inputs: list = [],
-            outputs: list = [],
+            inputs: List = [],
+            outputs: List = [],
         ) -> str:
             return command
 
@@ -402,7 +402,7 @@ class CommandLineTool:
         )
 
     @property
-    def version(self) -> str:
+    def cwl_version(self) -> str:
         """CWL version"""
         return self.__version
 
