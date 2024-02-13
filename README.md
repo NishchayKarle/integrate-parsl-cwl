@@ -194,6 +194,7 @@ touch = CommandLineTool("touch.cwl")
 touch(filenames=["file_name_1.txt", "file_name_2.txt"], output_files=["file_name_1.txt", "file_name_2.txt"]).result()
 ```
 
+### What's Executed:
 ```
 $ touch 'file_name_1.txt' 'file_name_2.txt'
 ```
@@ -228,6 +229,7 @@ cat = CommandLineTool("cat.cwl")
 cat(from_file="test_file.txt", to_file="cat_stdout.txt", output_file="cat_stdout.txt").result()
 ```
 
+### What's Executed:
 ```
 $ cat test_file.txt > 'cat_stdout.txt'
 ```
