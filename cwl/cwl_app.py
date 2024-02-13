@@ -174,7 +174,7 @@ class ArgumentMissing(Exception):
         super().__init__(message)
 
 
-class CommandLineTool:
+class CWLApp:
     """Class to represent a CWL Command Line Tool and run it using Parsl"""
 
     def __init__(self, cwl_file: str) -> None:

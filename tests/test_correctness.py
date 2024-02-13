@@ -3,7 +3,7 @@
 import os
 import parsl
 from parsl.configs.local_threads import config
-from cwl import CommandLineTool
+from cwl import CWLApp
 
 parsl.load(config)
 
@@ -32,7 +32,7 @@ def test_find() -> None:
     )
 
     # Create CommandLineTool app and run with parsl
-    find = CommandLineTool(os.path.join(test_cwl_files, "find.cwl"))
+    find = CWLApp(os.path.join(test_cwl_files, "find.cwl"))
 
     # Test 1
     find(
@@ -93,7 +93,7 @@ def test_find_list():
     )
 
     # Create CommandLineTool app and run with parsl
-    find = CommandLineTool(os.path.join(test_cwl_files, "find.cwl"))
+    find = CWLApp(os.path.join(test_cwl_files, "find.cwl"))
 
     # Test 1
     find(
@@ -146,7 +146,7 @@ def test_touch() -> None:
     )
 
     # Create CommandLineTool app and run with parsl
-    touch = CommandLineTool(os.path.join(test_cwl_files, "touch.cwl"))
+    touch = CWLApp(os.path.join(test_cwl_files, "touch.cwl"))
 
     # Test 1
     touch(
@@ -199,7 +199,7 @@ def test_word_count() -> None:
     )
 
     # Create CommandLineTool app and run with parsl
-    word_count = CommandLineTool(os.path.join(test_cwl_files, "wc.cwl"))
+    word_count = CWLApp(os.path.join(test_cwl_files, "wc.cwl"))
 
     # Test 1
     word_count(

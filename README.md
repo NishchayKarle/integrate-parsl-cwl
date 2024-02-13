@@ -32,7 +32,7 @@ outputs:
 from cwl import CommandLineTool
 
 # app takes one argument - path to cwl file
-echo = CommandLineTool("echo.cwl")
+echo = CWLApp("echo.cwl")
 print(echo.command_template)
 ```
 
@@ -49,7 +49,7 @@ Running the app locally will run the command line tool on the local system, and 
 
 The arguments to the function will have the same names as the inputs and outputs listed on the CWL
 ```python
-echo = CommandLineTool("echo.cwl")
+echo = CWLApp("echo.cwl")
 echo.run_local(message="Hello, World!", stdout="echo_stdout.txt")
 ```
 
@@ -104,7 +104,7 @@ outputs:
 ```
 
 ```python
-find = CommandLineTool("find.cwl")
+find = CWLApp("find.cwl")
 print(find.command_template)
 # find <dir> [-name <name>] [-maxdepth <maxdepth>]
 
@@ -153,7 +153,7 @@ outputs:
 ```
 
 ```python
-wc = CommandLineTool("wc.cwl")
+wc = CWLApp("wc.cwl")
 
 wc(text_file="test_file.txt", word_count="wc_stdout.txt").result()
 
@@ -189,7 +189,7 @@ outputs:
 ```
 
 ```python
-touch = CommandLineTool("touch.cwl")
+touch = CWLApp("touch.cwl")
 
 touch(filenames=["file_name_1.txt", "file_name_2.txt"], output_files=["file_name_1.txt", "file_name_2.txt"]).result()
 ```
@@ -225,7 +225,7 @@ outputs:
 ```
 
 ```python
-cat = CommandLineTool("cat.cwl")
+cat = CWLApp("cat.cwl")
 cat(from_file="test_file.txt", to_file="cat_stdout.txt", output_file="cat_stdout.txt").result()
 ```
 
