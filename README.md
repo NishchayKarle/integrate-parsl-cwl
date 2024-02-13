@@ -73,31 +73,7 @@ The input files used by the command and any output files created during executio
 
 Learn more about bash_app [here](https://parsl.readthedocs.io/en/stable/1-parsl-introduction.html#Bash-Apps)
 
-### Configuring Parsl
-
-Parsl separates code and execution. To do so, it relies on a configuration model to describe the pool of resources to be used for execution (e.g., clusters, clouds, threads).
-
-We’ll come back to configuration later in this tutorial. For now, we configure this example to use a local pool of [threads](https://en.wikipedia.org/wiki/Thread_computing) to facilitate local parallel execution.
-
-```python
-import parsl
-from parsl.app.app import bash_app
-from parsl.configs.local_threads import config
-from parsl.data_provider.files import File
-
-parsl.load(config)
-```
-
-
-Here's a generic bash_app that will work with all CommandLineTool apps
-
-```python
-@bash_app
-def parsl_test(command: str, stdout: str = None, stderr: str = None, inputs: list[File] = [], outputs: list[File] = []):
-    return command
-```
-
-### Example 1: find.cwl - find command
+### Example 1: find.cwl - cwl for the 'find' command
 ```yml
 cwlVersion: v1.2
 class: CommandLineTool
@@ -132,40 +108,28 @@ find = CommandLineTool("find.cwl")
 print(find.command_template)
 # find <dir> [-name <name>] [-maxdepth <maxdepth>]
 
-cmd = find.get_parsl_command_args(dir=".", maxdepth=3, name="*.docx", example_out="find_stdout.txt")
-"""
-cmd = {
-    'command': "find '.' -name '*.docx' -maxdepth 3",
-    'stdout': 'find_stdout.txt',
-    'stderr': None,
-    'inputs': [],
-    'outputs': []
-}
-"""
-
-# forward args to bash_app and wait for completion
-parsl_test(**cmd).result()
+find(dir=".", maxdepth=3, name="*.docx", example_out="find_stdout.txt").result()
 
 with open("find_stdout.txt", "r") as f:
     print(f.read())
 ```
 
-```get_parsl_command_args``` function takes the same arguments as mentioned in the inputs and outputs section of the cwl and returns a python dictionary with args necessary for parsl's bash app, enabling easy forwarding of required args by bash_app.
+### What's Executed:
+```
+$ find '.' -name '*.docx' -maxdepth 3
+```
 
-input args with default values and optional input args in the CWL can be left out
+Running the CommandLineTool expects the same arguments as mentioned in the inputs and outputs section of the cwl
+</br>
+Args can be optional and left out and can have default values which will be used if left out
+
 ```python
-cmd = find.get_parsl_command_args(dir=".", example_out="find_stdout.txt")
-"""
-cmd = {
-    'command': "find '.'",
-    'stdout': 'find_stdout.txt',
-    'stderr': None,
-    'inputs': [],
-    'outputs': []
-}
-"""
+find(dir=".", example_out="find_stdout.txt").result()
+```
 
-parsl_test(**cmd).result()
+### What's Executed:
+```
+$ find '.'
 ```
 ---
 
@@ -191,20 +155,15 @@ outputs:
 ```python
 wc = CommandLineTool("wc.cwl")
 
-cmd = wc.get_parsl_command_args(text_file="test_file.txt", word_count="wc_stdout.txt")
-"""
-cmd = {
-    'command': 'wc test_file.txt',
-    'stdout': 'wc_stdout.txt',
-    'stderr': 'wc_stderr.txt',
-    'inputs': [<File at 0x1065d85e0 url=test_file.txt scheme=file netloc= path=test_file.txt filename=test_file.txt>],
-    'outputs': []
-}
-"""
+wc(text_file="test_file.txt", word_count="wc_stdout.txt").result()
 
-parsl_test(**cmd).result()
 with open("wc_stdout.txt", "r") as f:
     print(f.read())
+```
+
+### What's Executed:
+```
+$ wc test_file.txt
 ```
 ---
 
@@ -231,20 +190,12 @@ outputs:
 
 ```python
 touch = CommandLineTool("touch.cwl")
-cmd = touch.get_parsl_command_args(filenames=["file_name_1.txt", "file_name_2.txt"], output_files=["file_name_1.txt", "file_name_2.txt"])
-"""
-cmd = {
-  'command': "touch 'file_name_1.txt' 'file_name_2.txt'",
-  'stdout': None,
-  'stderr': None,
-  'inputs': [],
-  'outputs': [
-    <File at 0x107580880 url=file_name_1.txt scheme=file netloc= path=file_name_1.txt filename=file_name_1.txt>,
-    <File at 0x107566b20 url=file_name_2.txt scheme=file netloc= path=file_name_2.txt filename=file_name_2.txt>
-    ]
-}
-"""
-parsl_test(**cmd).result()
+
+touch(filenames=["file_name_1.txt", "file_name_2.txt"], output_files=["file_name_1.txt", "file_name_2.txt"]).result()
+```
+
+```
+$ touch 'file_name_1.txt' 'file_name_2.txt'
 ```
 ---
 
@@ -274,15 +225,9 @@ outputs:
 
 ```python
 cat = CommandLineTool("cat.cwl")
-cmd = cat.get_parsl_command_args(from_file="cat.cwl", to_file="cat_stdout.txt", output_file="cat_stdout.txt")
-"""
-cmd = {
-  'command': "cat cat.cwl > 'cat_stdout.txt'",
-  'inputs': [<File at 0x104e3bb50 url=cat.cwl scheme=file netloc= path=cat.cwl filename=cat.cwl>],
-  'outputs': [<File at 0x104e3b040 url=cat_stdout.txt scheme=file netloc= path=cat_stdout.txt filename=cat_stdout.txt>],
-  'stderr': None,
-  'stdout': None
-}
-"""
-parsl_test(**cmd).result()
+cat(from_file="test_file.txt", to_file="cat_stdout.txt", output_file="cat_stdout.txt").result()
+```
+
+```
+$ cat test_file.txt > 'cat_stdout.txt'
 ```
