@@ -1,8 +1,11 @@
 """Tests for correctness of the CommandLineTool"""
 
 import os
+
 import parsl
 from parsl.configs.local_threads import config
+from parsl.data_provider.files import File
+
 from cwl import CWLApp
 
 parsl.load(config)
@@ -155,8 +158,8 @@ def test_touch() -> None:
             os.path.join(test_runtime_files, "touch2.txt"),
         ],
         output_files=[
-            os.path.join(test_runtime_files, "touch1.txt"),
-            os.path.join(test_runtime_files, "touch2.txt"),
+            File(os.path.join(test_runtime_files, "touch1.txt")),
+            File(os.path.join(test_runtime_files, "touch2.txt")),
         ],
     ).result()
 
@@ -203,7 +206,7 @@ def test_word_count() -> None:
 
     # Test 1
     word_count(
-        text_file=os.path.join(test_cwl_files, "wc.cwl"),
+        text_file=File(os.path.join(test_cwl_files, "wc.cwl")),
         stdout=os.path.join(test_runtime_files, "word_count_stdout.txt"),
     ).result()
 

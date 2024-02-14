@@ -8,7 +8,7 @@ Learn about Parsl [here](https://parsl.readthedocs.io/en/stable/index.html)
 
 ## Getting started
 
-### Example 1: echo.cwl
+### Example: echo.cwl
 
 ```yml
 cwlVersion: v1.0
@@ -43,26 +43,6 @@ echo <message>
 ```
 
 ---
-
-### Example 2: Running the CWL locally
-Running the app locally will run the command line tool on the local system, and act the same as running on a bash shell.
-
-The arguments to the function will have the same names as the inputs and outputs listed on the CWL
-```python
-echo = CWLApp("echo.cwl")
-echo.run_local(message="Hello, World!", stdout="echo_stdout.txt")
-```
-
-### Output
-
-```bash
-RESULT OF RUNNING COMMAND LINE TOOL:
-Hello, World!
-EXIT CODE: 0
-```
-
----
-
 ### Running CommandLineTool app with Parsl
 
 Parsl’s Bash app allows you to wrap execution of external applications from the command-line as you would in a Bash shell. It can also be used to execute Bash scripts directly. To define a Bash app, the wrapped Python function must return the command-line string to be executed. 
@@ -134,6 +114,9 @@ $ find '.'
 ---
 
 ### Example 2: wc.cwl - word count
+
+Create and use parsl File objects for all inputs/outputs that have type 'File'
+
 ```yml
 cwlVersion: v1.0
 class: CommandLineTool
@@ -153,9 +136,11 @@ outputs:
 ```
 
 ```python
+from parsl.data_provider.files import File
+
 wc = CWLApp("wc.cwl")
 
-wc(text_file="test_file.txt", word_count="wc_stdout.txt").result()
+wc(text_file=File("test_file.txt"), word_count="wc_stdout.txt").result()
 
 with open("wc_stdout.txt", "r") as f:
     print(f.read())
@@ -191,7 +176,13 @@ outputs:
 ```python
 touch = CWLApp("touch.cwl")
 
-touch(filenames=["file_name_1.txt", "file_name_2.txt"], output_files=["file_name_1.txt", "file_name_2.txt"]).result()
+touch(
+  filenames=["file_name_1.txt", "file_name_2.txt"],
+  output_files=[
+    File("file_name_1.txt"),
+    File("file_name_2.txt")
+  ]
+).result()
 ```
 
 ### What's Executed:
@@ -200,15 +191,15 @@ $ touch 'file_name_1.txt' 'file_name_2.txt'
 ```
 ---
 
-### Example 4: cat.cwl - Cat contents of one file to another file
+### Example 4: cat.cwl - Cat contents of file(s) to another file
 ```yml
 cwlVersion: v1.0
 class: CommandLineTool
 baseCommand: cat
 
 inputs:
-  from_file:
-    type: File
+  from_files:
+    type: File[]
     inputBinding:
       position: 1
     
@@ -216,7 +207,7 @@ inputs:
     type: string
     inputBinding:
       position: 2
-      prefix: ">"
+      prefix: ">>"
       separate: true
 
 outputs:
@@ -226,10 +217,10 @@ outputs:
 
 ```python
 cat = CWLApp("cat.cwl")
-cat(from_file="test_file.txt", to_file="cat_stdout.txt", output_file="cat_stdout.txt").result()
+cat(from_files=[File("test_file.txt")], to_file="cat_stdout.txt", output_file=File("cat_stdout.txt")).result()
 ```
 
 ### What's Executed:
 ```
-$ cat test_file.txt > 'cat_stdout.txt'
+$ cat test_file.txt >> 'cat_stdout.txt'
 ```

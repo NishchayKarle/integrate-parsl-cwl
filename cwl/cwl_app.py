@@ -1,13 +1,17 @@
 """Module to represent a CWL Command Line Tool and run it using Parsl"""
 
-from collections import namedtuple
 import os
 import pprint
+from collections import namedtuple
 from typing import Any, Dict, List, Optional, Union
-from parsl.app.app import bash_app
-from parsl.data_provider.files import File
-from schema import Schema, And, Optional as Opt, Or, Regex, SchemaError
+
 import yaml
+from parsl.app.app import bash_app
+from parsl.app.futures import DataFuture
+from parsl.data_provider.files import File
+from schema import And
+from schema import Optional as Opt
+from schema import Or, Regex, Schema, SchemaError
 
 
 class InputArgument:
@@ -98,41 +102,43 @@ class InputArgument:
 
         return input_arg_str
 
-    def to_string(self, input_arg: Any = None) -> str:
+    def to_string(self, value: Any = None) -> str:
         """String representation of the input argument
 
         Args:
-            input_arg (Any, optional): input arg value. Defaults to None.
+            value (Any, optional): input arg value. Defaults to None.
         """
         if self.arg_type == self.BOOLEAN:
-            if input_arg:
-                return f"{self.prefix}"
+            return self.__boolean_to_string(value)
 
-            return ""
+        if value is None:
+            value = self.default
 
-        input_arg_str = ""
-        if not input_arg:
-            input_arg = self.default
-
-        if self.arg_type == self.STRING:
-            string_quote = "'"
-        else:
-            string_quote = ""
-
-        if self.array:
-            itm_sep = self.item_separator if self.item_separator else " "
-            input_arg_str += f"{itm_sep}".join(
-                [f"{string_quote}{arg}{string_quote}" for arg in input_arg],
-            )
-
-        else:
-            input_arg_str += f"{string_quote}{input_arg}{string_quote}"
+        res_string = self.__process_value(value)
 
         if self.prefix:
-            sep = " " if self.separate else ""
-            input_arg_str = f"{self.prefix}{sep}{input_arg_str}"
+            res_string = (
+                f"{self.prefix} " + res_string if self.separate else f"{self.prefix}{res_string}"
+            )
 
-        return input_arg_str
+        return res_string
+
+    def __boolean_to_string(self, value: Any) -> str:
+        if value:
+            return str(self.prefix)
+        return ""
+
+    def __process_value(self, value: Any) -> str:
+        if self.array:
+            return self.__process_array_value(value)
+
+        return str(value) if self.arg_type != self.FILE else str(value.filepath)
+
+    def __process_array_value(self, value: Any) -> str:
+        itm_sep = self.item_separator if self.item_separator else " "
+        str_value_list = [str(v) if self.arg_type != self.FILE else str(v.filepath) for v in value]
+
+        return itm_sep.join(str_value_list)
 
     def __lt__(self, other) -> bool:
         if self.position is None and other.position is None:
@@ -487,9 +493,7 @@ class CWLApp:
                 continue
 
             else:
-                raise ArgumentMissing(
-                    f"missing required value for argument: {input_arg.arg_id}"
-                )
+                raise ArgumentMissing(f"missing required value for argument: {input_arg.arg_id}")
 
         return f"{self.__base_command} {' '.join(input_args)}"
 
@@ -499,18 +503,37 @@ class CWLApp:
         kwargs: values for inputs and outputs mentioned in the CWL file
 
         Returns: Dict[str, Any]: Args needed to run the command using Parsl
+                args = {
+                    "command": str,
+                    "stdout": File,
+                    "stderr": File,
+                    "inputs": [File],
+                    "outputs": [File],
+                }
         """
 
-        cmd_args = {
-            "command": None,
-            "stdout": None,
-            "stderr": None,
-            "inputs": None,
-            "outputs": None,
-        }
+        def handle_input_output_files(file):
+            if file.arg_type == "File" and file.arg_id in kwargs:
+                if file.array:
+                    for f in kwargs[file.arg_id]:
+                        if not (isinstance(f, File) or isinstance(f, DataFuture)):
+                            raise TypeError(
+                                f"{file.arg_id}: Expected list[{File}] type, got {type(f)}"
+                            )
 
-        # get command string
-        command = self.get_command(**kwargs)
+                    return kwargs[file.arg_id]
+
+                if not (
+                    isinstance(kwargs[file.arg_id], File)
+                    or isinstance(kwargs[file.arg_id], DataFuture)
+                ):
+                    raise TypeError(
+                        f"{file.arg_id}: Expected {File} type, got {type(kwargs[file.arg_id])}"
+                    )
+
+                return [kwargs[file.arg_id]]
+
+            return []
 
         # Check if all the output arguments are provided
         stdout = None
@@ -532,15 +555,6 @@ class CWLApp:
             elif output_arg.arg_type == "File" and output_arg.arg_id not in kwargs:
                 raise ArgumentMissing(f"missing required value for argument: {output_arg.arg_id}")
 
-        def handle_input_output_files(file):
-            if file.arg_type == "File" and file.arg_id in kwargs:
-                if file.array:
-                    return [File(f) for f in kwargs[file.arg_id]]
-
-                return [File(kwargs[file.arg_id])]
-
-            return []
-
         # list input files
         input_files = []
         for file in self.__inputs:
@@ -551,19 +565,20 @@ class CWLApp:
         for file in self.__outputs:
             output_files.extend(handle_input_output_files(file))
 
-        cmd_args.update(
-            {
-                "command": command,
-                "stdout": stdout,
-                "stderr": stderr,
-                "inputs": input_files,
-                "outputs": output_files,
-            }
-        )
+        # get command string
+        command = self.get_command(**kwargs)
+
+        cmd_args = {
+            "command": command,
+            "stdout": stdout,
+            "stderr": stderr,
+            "inputs": input_files,
+            "outputs": output_files,
+        }
 
         return cmd_args
 
-    def run_local(self, **kwargs):
+    def __run_local(self, **kwargs):
         """Local run of the command"""
         print("RESULT OF RUNNING COMMAND LINE TOOL:")
         exit_code = os.system(self.get_command(**kwargs))
