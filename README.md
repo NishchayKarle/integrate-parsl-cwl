@@ -224,3 +224,48 @@ cat(from_files=[File("test_file.txt")], to_file="cat_stdout.txt", output_file=Fi
 ```
 $ cat test_file.txt >> 'cat_stdout.txt'
 ```
+
+---
+
+### Example 5: Combination of CWLapps
+create the CWLapp once and reuse or forward outputs of one app to another same as parsl
+
+```python
+import os
+
+from parsl.data_provider.files import File
+
+from tools import cat
+
+q1 = cat(
+    from_files=[
+        File(os.path.join(os.getcwd(), "reports", "january_report.csv")),
+        File(os.path.join(os.getcwd(), "reports", "february_report.csv")),
+        File(os.path.join(os.getcwd(), "reports", "march_report.csv")),
+    ],
+    to_file=os.path.join(os.getcwd(), "q1_report.csv"),
+    output_file=File(os.path.join(os.getcwd(), "q1_report.csv")),
+)
+
+q2 = cat(
+    from_files=[
+        File(os.path.join(os.getcwd(), "reports", "april_report.csv")),
+        File(os.path.join(os.getcwd(), "reports", "may_report.csv")),
+        File(os.path.join(os.getcwd(), "reports", "june_report.csv")),
+    ],
+    to_file=os.path.join(os.getcwd(), "q2_report.csv"),
+    output_file=File(os.path.join(os.getcwd(), "q2_report.csv")),
+)
+
+# use outputs of q1 and q2 
+half_year_report = cat(
+    from_files=[q1.outputs[0], q2.outputs[0]],
+    to_file=os.path.join(os.getcwd(), "half_year_report.csv"),
+    output_file=File(os.path.join(os.getcwd(), "half_year_report.csv")),
+)
+
+half_year_report.result()
+
+with open("half_year_report.csv", "r") as f:
+    print(f.read())
+```
