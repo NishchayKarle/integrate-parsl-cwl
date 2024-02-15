@@ -123,10 +123,40 @@ class: CommandLineTool
 baseCommand: wc
 
 inputs:
-  text_file:
-    type: File
+  len_line_most_bytes:
+    type: boolean?
     inputBinding:
       position: 1
+      prefix: -L
+
+  num_bytes:
+    type: boolean?
+    inputBinding:
+      position: 2
+      prefix: -c
+  
+  num_lines:
+    type: boolean?
+    inputBinding:
+      position: 3
+      prefix: -l
+  
+  num_chars:
+    type: boolean?
+    inputBinding:
+      position: 4
+      prefix: -m
+  
+  num_words:  
+    type: boolean?
+    inputBinding:
+      position: 5
+      prefix: -w
+
+  input_files:
+    type: File[]
+    inputBinding:
+      position: 6
 
 outputs:
   stdout:
@@ -140,7 +170,7 @@ from parsl.data_provider.files import File
 
 wc = CWLApp("wc.cwl")
 
-wc(text_file=File("test_file.txt"), word_count="wc_stdout.txt").result()
+wc(input_files=[File("test_file.txt")], stdout="wc_stdout.txt").result()
 
 with open("wc_stdout.txt", "r") as f:
     print(f.read())
@@ -267,5 +297,36 @@ half_year_report = cat(
 half_year_report.result()
 
 with open("half_year_report.csv", "r") as f:
+    print(f.read())
+```
+
+---
+
+### Example 6: cat and wc
+
+Combine files using 'cat' and use 'wc' to count lines, words, bytes etc
+
+```python
+from tools import cat, wc
+
+cat_future = cat(
+    from_files=[
+        File(os.path.join(os.getcwd(), "file1.txt")),
+        File(os.path.join(os.getcwd(), "file2.txt")),
+        File(os.path.join(os.getcwd(), "file3.txt")),
+    ],
+    to_file=os.path.join(os.getcwd(), "combined.txt"),
+    output_file=File(os.path.join(os.getcwd(), "combined.txt")),
+)
+
+wc(
+    num_lines=True,
+    num_words=True,
+    input_files=[cat_future.outputs[0]],
+    stdout=os.path.join(os.getcwd(), "wc_stdout.txt"),
+    stderr=os.path.join(os.getcwd(), "wc_stderr.txt"),
+).result()
+
+with open("wc_stdout.txt", "r") as f:
     print(f.read())
 ```
