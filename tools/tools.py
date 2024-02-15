@@ -1,13 +1,15 @@
+import os
+
 from cwl import CWLApp
 
 # Create CommandLineTool objects CWL files
 
-cat = CWLApp("./tools/cwl_files/cat.cwl")
+cat = CWLApp(os.path.join("tools", "cwl_files", "cat.cwl"))
 
-find = CWLApp("./tools/cwl_files/find.cwl")
+find = CWLApp(os.path.join("tools", "cwl_files", "find.cwl"))
 
-touch = CWLApp("./tools/cwl_files/touch.cwl")
+touch = CWLApp(os.path.join("tools", "cwl_files", "touch.cwl"))
 
-wc = CWLApp("./tools/cwl_files/wc.cwl")
+wc = CWLApp(os.path.join("tools", "cwl_files", "wc.cwl"))
 
 # etc...

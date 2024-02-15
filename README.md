@@ -269,35 +269,35 @@ from tools import cat
 
 q1 = cat(
     from_files=[
-        File(os.path.join(os.getcwd(), "reports", "january_report.csv")),
-        File(os.path.join(os.getcwd(), "reports", "february_report.csv")),
-        File(os.path.join(os.getcwd(), "reports", "march_report.csv")),
+        File(os.path.join("reports", "january_report.csv")),
+        File(os.path.join("reports", "february_report.csv")),
+        File(os.path.join("reports", "march_report.csv")),
     ],
-    to_file=os.path.join(os.getcwd(), "q1_report.csv"),
-    output_file=File(os.path.join(os.getcwd(), "q1_report.csv")),
+    to_file="q1_report.csv",
+    output_file=File("q1_report.csv"),
 )
 
 q2 = cat(
     from_files=[
-        File(os.path.join(os.getcwd(), "reports", "april_report.csv")),
-        File(os.path.join(os.getcwd(), "reports", "may_report.csv")),
-        File(os.path.join(os.getcwd(), "reports", "june_report.csv")),
+        File(os.path.join("reports", "april_report.csv")),
+        File(os.path.join("reports", "may_report.csv")),
+        File(os.path.join("reports", "june_report.csv")),
     ],
-    to_file=os.path.join(os.getcwd(), "q2_report.csv"),
-    output_file=File(os.path.join(os.getcwd(), "q2_report.csv")),
+    to_file="q2_report.csv",
+    output_file=File("q2_report.csv"),
 )
 
-# use outputs of q1 and q2 
 half_year_report = cat(
     from_files=[q1.outputs[0], q2.outputs[0]],
-    to_file=os.path.join(os.getcwd(), "half_year_report.csv"),
-    output_file=File(os.path.join(os.getcwd(), "half_year_report.csv")),
+    to_file="half_year_report.csv",
+    output_file=File("half_year_report.csv"),
 )
 
 half_year_report.result()
 
 with open("half_year_report.csv", "r") as f:
     print(f.read())
+
 ```
 
 ---
@@ -307,24 +307,26 @@ with open("half_year_report.csv", "r") as f:
 Combine files using 'cat' and use 'wc' to count lines, words, bytes etc
 
 ```python
+from parsl.data_provider.files import File
+
 from tools import cat, wc
 
 cat_future = cat(
     from_files=[
-        File(os.path.join(os.getcwd(), "file1.txt")),
-        File(os.path.join(os.getcwd(), "file2.txt")),
-        File(os.path.join(os.getcwd(), "file3.txt")),
+        File("file1.txt"),
+        File("file2.txt"),
+        File("file3.txt"),
     ],
-    to_file=os.path.join(os.getcwd(), "combined.txt"),
-    output_file=File(os.path.join(os.getcwd(), "combined.txt")),
+    to_file="combined.txt",
+    output_file=File("combined.txt"),
 )
 
 wc(
     num_lines=True,
     num_words=True,
     input_files=[cat_future.outputs[0]],
-    stdout=os.path.join(os.getcwd(), "wc_stdout.txt"),
-    stderr=os.path.join(os.getcwd(), "wc_stderr.txt"),
+    stdout="wc_stdout.txt",
+    stderr="wc_stderr.txt",
 ).result()
 
 with open("wc_stdout.txt", "r") as f:
